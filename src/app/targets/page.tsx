@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ProviderTable } from '@/components/ProviderTable';
 import { FilterBar } from '@/components/FilterBar';
 import { HospiceProvider } from '@/lib/db';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
 
 function TargetsContent() {
@@ -14,6 +14,8 @@ function TargetsContent() {
   const [states, setStates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [currentFilters, setCurrentFilters] = useState<any>({});
+  const [exporting, setExporting] = useState(false);
 
   // Get initial filters from URL
   const initialFilters = {
@@ -27,6 +29,35 @@ function TargetsContent() {
 
   const activeState = searchParams.get('state');
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (currentFilters.classification) params.set('classification', currentFilters.classification);
+      if (currentFilters.state) params.set('state', currentFilters.state);
+      if (currentFilters.minAdc) params.set('minAdc', String(currentFilters.minAdc));
+      if (currentFilters.maxAdc) params.set('maxAdc', String(currentFilters.maxAdc));
+      if (currentFilters.conStateOnly) params.set('conStateOnly', 'true');
+      if (currentFilters.search) params.set('search', currentFilters.search);
+      params.set('format', 'csv');
+
+      const response = await fetch(`/api/export?${params}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hospice-targets-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   useEffect(() => {
     fetch('/api/states')
       .then(res => res.json())
@@ -35,6 +66,7 @@ function TargetsContent() {
 
   const fetchProviders = useCallback(async (filters: any) => {
     setLoading(true);
+    setCurrentFilters(filters);
     try {
       const params = new URLSearchParams();
       if (filters.classification) params.set('classification', filters.classification);
@@ -97,8 +129,22 @@ function TargetsContent() {
         </div>
       ) : (
         <>
-          <div className="mb-4 text-sm text-[var(--color-text-muted)]">
-            Showing {providers.length} of {totalCount.toLocaleString()} providers
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-sm text-[var(--color-text-muted)]">
+              Showing {providers.length} of {totalCount.toLocaleString()} providers
+            </span>
+            <button
+              onClick={handleExport}
+              disabled={exporting || providers.length === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-600)] font-medium text-sm hover:bg-[var(--color-turquoise-500)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Export CSV
+            </button>
           </div>
           <ProviderTable providers={providers} showAllColumns />
         </>

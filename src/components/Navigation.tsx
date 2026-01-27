@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/targets', label: 'All Targets', icon: List },
   { href: '/green', label: 'GREEN', icon: Target },
+  { href: '/watchlist', label: 'Watchlist', icon: Star },
   { href: '/washington', label: 'Washington', icon: MapPin },
 ];
 

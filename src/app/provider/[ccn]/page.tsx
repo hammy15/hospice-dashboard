@@ -1,5 +1,6 @@
 import { getProvider } from '@/lib/db';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
+import { WatchlistButton } from '@/components/WatchlistButton';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -95,7 +96,10 @@ export default async function ProviderDetailPage({ params }: Props) {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <ClassificationBadge classification={provider.classification} size="lg" />
+            <div className="flex items-center gap-3">
+              <WatchlistButton ccn={provider.ccn} providerName={provider.provider_name} size="lg" />
+              <ClassificationBadge classification={provider.classification} size="lg" />
+            </div>
             {provider.con_state && (
               <span className="flex items-center gap-1 text-sm text-[var(--color-turquoise-400)]">
                 <Shield className="w-4 h-4" />
