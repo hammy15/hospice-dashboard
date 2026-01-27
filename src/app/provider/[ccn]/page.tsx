@@ -337,10 +337,41 @@ export default async function ProviderDetailPage({ params }: Props) {
               <span className="text-[var(--color-text-muted)]">Market Type</span>
               <span>{provider.market_type || '—'}</span>
             </div>
-            <div className="flex justify-between py-2">
+            <div className="flex justify-between py-2 border-b border-[var(--color-border)]">
               <span className="text-[var(--color-text-muted)]">Certified</span>
               <span>{formatDate(provider.certification_date)}</span>
             </div>
+
+            {/* Census Demographics */}
+            {provider.county_pop_65_plus && (
+              <>
+                <div className="pt-2 pb-1">
+                  <span className="text-xs font-medium text-[var(--color-turquoise-400)] uppercase tracking-wider">
+                    County Demographics
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)]">65+ Population</span>
+                  <span className="font-mono text-[var(--color-turquoise-400)]">
+                    {Number(provider.county_pop_65_plus).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[var(--color-border)]">
+                  <span className="text-[var(--color-text-muted)]">% 65+</span>
+                  <span className={`font-mono ${Number(provider.county_pct_65_plus) >= 20 ? 'text-emerald-400' : ''}`}>
+                    {provider.county_pct_65_plus}%
+                  </span>
+                </div>
+                {provider.county_median_income && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-[var(--color-text-muted)]">Median Income</span>
+                    <span className="font-mono">
+                      ${Number(provider.county_median_income).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

@@ -48,6 +48,13 @@ export interface HospiceProvider {
   website: string | null;
   administrator_name: string | null;
   administrator_phone: string | null;
+  // Census demographics
+  county_population: number | null;
+  county_pop_65_plus: number | null;
+  county_pct_65_plus: number | null;
+  county_median_income: number | null;
+  county_fips: string | null;
+  census_data_year: number | null;
 }
 
 export async function getStats() {
@@ -258,6 +265,41 @@ export async function getRelatedProviders(ccn: string, state: string, city: stri
       CASE WHEN city = ${city} THEN 0 ELSE 1 END,
       CASE classification WHEN 'GREEN' THEN 1 ELSE 2 END,
       overall_score DESC
+    LIMIT ${limit}
+  `;
+}
+
+export async function getMarketDemographics(state: string) {
+  const result = await sql`
+    SELECT
+      ROUND(AVG(county_pop_65_plus)::numeric, 0) as avg_pop_65_plus,
+      ROUND(AVG(county_pct_65_plus)::numeric, 1) as avg_pct_65_plus,
+      ROUND(AVG(county_median_income)::numeric, 0) as avg_median_income,
+      SUM(county_pop_65_plus) as total_pop_65_plus,
+      COUNT(DISTINCT county) as counties_covered
+    FROM hospice_providers
+    WHERE UPPER(state) = ${state.toUpperCase()}
+      AND county_pop_65_plus IS NOT NULL
+  `;
+  return result[0];
+}
+
+export async function getTopCountiesByDemographics(state: string, limit = 10) {
+  return await sql`
+    SELECT
+      county,
+      county_population,
+      county_pop_65_plus,
+      county_pct_65_plus,
+      county_median_income,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) as provider_count
+    FROM hospice_providers
+    WHERE UPPER(state) = ${state.toUpperCase()}
+      AND county_pop_65_plus IS NOT NULL
+    GROUP BY county, county_population, county_pop_65_plus, county_pct_65_plus, county_median_income
+    ORDER BY county_pop_65_plus DESC
     LIMIT ${limit}
   `;
 }

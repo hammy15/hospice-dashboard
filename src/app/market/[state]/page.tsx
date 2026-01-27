@@ -1,8 +1,8 @@
-import { getMarketTargets, getMarketStats, getMarketCityBreakdown } from '@/lib/db';
+import { getMarketTargets, getMarketStats, getMarketCityBreakdown, getMarketDemographics, getTopCountiesByDemographics } from '@/lib/db';
 import { ProviderTable } from '@/components/ProviderTable';
 import { StatCard } from '@/components/StatCard';
 import { notFound } from 'next/navigation';
-import { MapPin, Shield, Building2, Phone, Globe, TrendingUp } from 'lucide-react';
+import { MapPin, Shield, Building2, Phone, Globe, TrendingUp, Users, DollarSign, PieChart } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -103,10 +103,12 @@ export default async function MarketPage({ params }: { params: Promise<{ state: 
     notFound();
   }
 
-  const [targets, stats, cityBreakdown] = await Promise.all([
+  const [targets, stats, cityBreakdown, demographics, topCounties] = await Promise.all([
     getMarketTargets(state),
     getMarketStats(state),
     getMarketCityBreakdown(state),
+    getMarketDemographics(state),
+    getTopCountiesByDemographics(state),
   ]);
 
   const greenCount = Number(stats.green_count) || 0;
@@ -180,6 +182,98 @@ export default async function MarketPage({ params }: { params: Promise<{ state: 
           icon="building"
         />
       </div>
+
+      {/* Demographics Panel */}
+      {demographics?.avg_pop_65_plus && (
+        <div className="glass-card rounded-2xl p-6 mb-8">
+          <h3 className="font-semibold text-[var(--color-turquoise-400)] mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Market Demographics (Census 2022)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Avg 65+ Population</p>
+              <p className="text-2xl font-bold font-mono text-[var(--color-turquoise-400)]">
+                {Number(demographics.avg_pop_65_plus).toLocaleString()}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">per county</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Avg % 65+</p>
+              <p className="text-2xl font-bold font-mono text-emerald-400">
+                {demographics.avg_pct_65_plus}%
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">of population</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Median Income</p>
+              <p className="text-2xl font-bold font-mono">
+                ${Number(demographics.avg_median_income).toLocaleString()}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">household avg</p>
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Counties</p>
+              <p className="text-2xl font-bold font-mono">
+                {demographics.counties_covered}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">with providers</p>
+            </div>
+          </div>
+
+          {/* Top Counties by 65+ Population */}
+          {topCounties && topCounties.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">Top Counties by 65+ Population</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className="text-left py-2 px-3 font-medium text-[var(--color-text-muted)]">County</th>
+                      <th className="text-right py-2 px-3 font-medium text-[var(--color-text-muted)]">65+ Pop</th>
+                      <th className="text-right py-2 px-3 font-medium text-[var(--color-text-muted)]">% 65+</th>
+                      <th className="text-right py-2 px-3 font-medium text-[var(--color-text-muted)]">Income</th>
+                      <th className="text-right py-2 px-3 font-medium text-[var(--color-text-muted)]">Targets</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(topCounties as any[]).slice(0, 8).map((county, i) => (
+                      <tr key={county.county} className="border-b border-[var(--color-border)]/50 hover:bg-[var(--color-bg-hover)]">
+                        <td className="py-2 px-3 font-medium">{county.county}</td>
+                        <td className="py-2 px-3 text-right font-mono text-[var(--color-turquoise-400)]">
+                          {Number(county.county_pop_65_plus).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono">
+                          <span className={Number(county.county_pct_65_plus) >= 20 ? 'text-emerald-400' : ''}>
+                            {county.county_pct_65_plus}%
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono text-[var(--color-text-muted)]">
+                          ${Number(county.county_median_income).toLocaleString()}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {Number(county.green_count) > 0 && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                                {county.green_count}G
+                              </span>
+                            )}
+                            {Number(county.yellow_count) > 0 && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                                {county.yellow_count}Y
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Market Notes */}
       <div className="glass-card rounded-2xl p-6 mb-8">
