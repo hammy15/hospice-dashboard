@@ -172,38 +172,62 @@ export default async function ProviderDetailPage({ params }: Props) {
         </div>
 
         {/* Score Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Overall</p>
+            <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Overall</p>
             <p className={`text-2xl font-bold font-mono ${getScoreColor(provider.overall_score)}`}>
               {formatScore(provider.overall_score)}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Quality</p>
+            <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Quality</p>
             <p className={`text-2xl font-bold font-mono ${getScoreColor(provider.quality_score)}`}>
               {formatScore(provider.quality_score)}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Compliance</p>
+            <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Compliance</p>
             <p className={`text-2xl font-bold font-mono ${getScoreColor(provider.compliance_score)}`}>
               {formatScore(provider.compliance_score)}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Operational</p>
+            <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Operational</p>
             <p className={`text-2xl font-bold font-mono ${getScoreColor(provider.operational_score)}`}>
               {formatScore(provider.operational_score)}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
-            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Market</p>
+            <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Market</p>
             <p className={`text-2xl font-bold font-mono ${getScoreColor(provider.market_score)}`}>
               {formatScore(provider.market_score)}
             </p>
           </div>
         </div>
+
+        {/* CMS Star Ratings */}
+        {provider.cms_cahps_star && (
+          <div className="flex items-center justify-center gap-6 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <div className="text-center">
+              <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">CAHPS Survey Rating</p>
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-2xl font-bold text-amber-400">{Number(provider.cms_cahps_star).toFixed(1)}</span>
+                <span className="text-amber-400 text-xl">★</span>
+              </div>
+              <p className="text-xs text-[var(--color-text-secondary)]">Family Caregiver Survey</p>
+            </div>
+            {provider.cms_quality_star && (
+              <div className="text-center border-l border-amber-500/20 pl-6">
+                <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider mb-1 font-medium">Quality Star</p>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-2xl font-bold text-amber-400">{Number(provider.cms_quality_star).toFixed(1)}</span>
+                  <span className="text-amber-400 text-xl">★</span>
+                </div>
+                <p className="text-xs text-[var(--color-text-secondary)]">CMS Quality Rating</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Contact Information */}

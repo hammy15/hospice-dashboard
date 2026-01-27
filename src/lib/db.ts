@@ -55,6 +55,10 @@ export interface HospiceProvider {
   county_median_income: number | null;
   county_fips: string | null;
   census_data_year: number | null;
+  // Star ratings
+  cms_quality_star: number | null;
+  cms_cahps_star: number | null;
+  star_rating_date: string | null;
 }
 
 export async function getStats() {
@@ -232,7 +236,9 @@ export async function getMarketStats(state: string) {
       BOOL_OR(con_state) as is_con_state,
       COUNT(DISTINCT city) as city_count,
       COUNT(*) FILTER (WHERE website IS NOT NULL) as with_website,
-      COUNT(*) FILTER (WHERE phone_number IS NOT NULL) as with_phone
+      COUNT(*) FILTER (WHERE phone_number IS NOT NULL) as with_phone,
+      ROUND(AVG(cms_cahps_star)::numeric, 2) as avg_cahps_star,
+      COUNT(cms_cahps_star) as with_cahps_star
     FROM hospice_providers
     WHERE UPPER(state) = ${state.toUpperCase()}
   `;

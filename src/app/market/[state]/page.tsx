@@ -183,6 +183,25 @@ export default async function MarketPage({ params }: { params: Promise<{ state: 
         />
       </div>
 
+      {/* Star Rating Summary */}
+      {stats.avg_cahps_star && (
+        <div className="glass-card rounded-2xl p-4 mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <span className="text-white text-xl">★</span>
+            </div>
+            <div>
+              <p className="text-sm text-[var(--color-text-secondary)] font-medium">Average CAHPS Rating</p>
+              <p className="text-2xl font-bold text-amber-400">{stats.avg_cahps_star}★</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-[var(--color-text-secondary)]">{stats.with_cahps_star} of {stats.total_count} providers rated</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Family Caregiver Survey (CMS Nov 2025)</p>
+          </div>
+        </div>
+      )}
+
       {/* Demographics Panel */}
       {demographics?.avg_pop_65_plus && (
         <div className="glass-card rounded-2xl p-6 mb-8">
