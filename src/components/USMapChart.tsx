@@ -17,85 +17,99 @@ interface USMapChartProps {
   data: StateData[];
 }
 
-// State abbreviation to path data mapping (simplified US map)
-const statePaths: Record<string, { d: string; x: number; y: number }> = {
-  WA: { d: 'M 58 22 L 100 22 L 100 50 L 58 50 Z', x: 79, y: 36 },
-  OR: { d: 'M 58 52 L 100 52 L 100 88 L 58 88 Z', x: 79, y: 70 },
-  CA: { d: 'M 58 90 L 95 90 L 95 170 L 58 170 Z', x: 76, y: 130 },
-  NV: { d: 'M 97 70 L 125 70 L 125 130 L 97 130 Z', x: 111, y: 100 },
-  AZ: { d: 'M 97 132 L 138 132 L 138 180 L 97 180 Z', x: 117, y: 156 },
-  UT: { d: 'M 127 70 L 158 70 L 158 115 L 127 115 Z', x: 142, y: 92 },
-  ID: { d: 'M 102 22 L 138 22 L 138 68 L 102 68 Z', x: 120, y: 45 },
-  MT: { d: 'M 140 22 L 210 22 L 210 58 L 140 58 Z', x: 175, y: 40 },
-  WY: { d: 'M 160 60 L 215 60 L 215 98 L 160 98 Z', x: 187, y: 79 },
-  CO: { d: 'M 160 100 L 220 100 L 220 145 L 160 145 Z', x: 190, y: 122 },
-  NM: { d: 'M 140 147 L 195 147 L 195 200 L 140 200 Z', x: 167, y: 173 },
-  TX: { d: 'M 197 155 L 290 155 L 290 250 L 197 250 Z', x: 243, y: 202 },
-  OK: { d: 'M 222 145 L 285 145 L 285 175 L 222 175 Z', x: 253, y: 160 },
-  KS: { d: 'M 222 105 L 285 105 L 285 143 L 222 143 Z', x: 253, y: 124 },
-  NE: { d: 'M 217 72 L 285 72 L 285 103 L 217 103 Z', x: 251, y: 87 },
-  SD: { d: 'M 217 42 L 280 42 L 280 70 L 217 70 Z', x: 248, y: 56 },
-  ND: { d: 'M 217 18 L 280 18 L 280 40 L 217 40 Z', x: 248, y: 29 },
-  MN: { d: 'M 282 18 L 330 18 L 330 75 L 282 75 Z', x: 306, y: 46 },
-  IA: { d: 'M 287 75 L 340 75 L 340 110 L 287 110 Z', x: 313, y: 92 },
-  MO: { d: 'M 287 112 L 345 112 L 345 160 L 287 160 Z', x: 316, y: 136 },
-  AR: { d: 'M 292 162 L 340 162 L 340 200 L 292 200 Z', x: 316, y: 181 },
-  LA: { d: 'M 292 202 L 340 202 L 340 245 L 292 245 Z', x: 316, y: 223 },
-  WI: { d: 'M 332 35 L 375 35 L 375 85 L 332 85 Z', x: 353, y: 60 },
-  IL: { d: 'M 342 87 L 380 87 L 380 145 L 342 145 Z', x: 361, y: 116 },
-  MS: { d: 'M 342 177 L 375 177 L 375 235 L 342 235 Z', x: 358, y: 206 },
-  MI: { d: 'M 375 38 L 420 38 L 420 95 L 375 95 Z', x: 397, y: 66 },
-  IN: { d: 'M 382 90 L 415 90 L 415 140 L 382 140 Z', x: 398, y: 115 },
-  KY: { d: 'M 380 140 L 435 140 L 435 165 L 380 165 Z', x: 407, y: 152 },
-  TN: { d: 'M 347 165 L 430 165 L 430 188 L 347 188 Z', x: 388, y: 176 },
-  AL: { d: 'M 377 190 L 410 190 L 410 240 L 377 240 Z', x: 393, y: 215 },
-  OH: { d: 'M 417 90 L 455 90 L 455 135 L 417 135 Z', x: 436, y: 112 },
-  GA: { d: 'M 412 190 L 455 190 L 455 245 L 412 245 Z', x: 433, y: 217 },
-  FL: { d: 'M 420 247 L 475 247 L 475 310 L 420 310 Z', x: 447, y: 278 },
-  SC: { d: 'M 437 175 L 480 175 L 480 205 L 437 205 Z', x: 458, y: 190 },
-  NC: { d: 'M 432 155 L 500 155 L 500 178 L 432 178 Z', x: 466, y: 166 },
-  VA: { d: 'M 437 130 L 500 130 L 500 155 L 437 155 Z', x: 468, y: 142 },
-  WV: { d: 'M 455 115 L 480 115 L 480 140 L 455 140 Z', x: 467, y: 127 },
-  PA: { d: 'M 455 85 L 510 85 L 510 115 L 455 115 Z', x: 482, y: 100 },
-  NY: { d: 'M 460 50 L 520 50 L 520 85 L 460 85 Z', x: 490, y: 67 },
-  NJ: { d: 'M 502 92 L 525 92 L 525 120 L 502 120 Z', x: 513, y: 106 },
-  CT: { d: 'M 508 72 L 532 72 L 532 88 L 508 88 Z', x: 520, y: 80 },
-  RI: { d: 'M 525 72 L 540 72 L 540 85 L 525 85 Z', x: 532, y: 78 },
-  MA: { d: 'M 515 58 L 545 58 L 545 72 L 515 72 Z', x: 530, y: 65 },
-  VT: { d: 'M 497 38 L 515 38 L 515 60 L 497 60 Z', x: 506, y: 49 },
-  NH: { d: 'M 515 38 L 532 38 L 532 58 L 515 58 Z', x: 523, y: 48 },
-  ME: { d: 'M 530 20 L 560 20 L 560 55 L 530 55 Z', x: 545, y: 37 },
-  MD: { d: 'M 482 118 L 515 118 L 515 135 L 482 135 Z', x: 498, y: 126 },
-  DE: { d: 'M 498 110 L 515 110 L 515 125 L 498 125 Z', x: 506, y: 117 },
-  AK: { d: 'M 85 230 L 155 230 L 155 290 L 85 290 Z', x: 120, y: 260 },
-  HI: { d: 'M 160 265 L 210 265 L 210 295 L 160 295 Z', x: 185, y: 280 },
-};
+// Grid layout for US states (approximating geographic positions)
+const stateGrid: { state: string; row: number; col: number }[] = [
+  // Row 0
+  { state: 'AK', row: 0, col: 0 },
+  { state: 'ME', row: 0, col: 10 },
+  // Row 1
+  { state: 'WA', row: 1, col: 1 },
+  { state: 'MT', row: 1, col: 2 },
+  { state: 'ND', row: 1, col: 3 },
+  { state: 'MN', row: 1, col: 4 },
+  { state: 'WI', row: 1, col: 5 },
+  { state: 'MI', row: 1, col: 7 },
+  { state: 'VT', row: 1, col: 9 },
+  { state: 'NH', row: 1, col: 10 },
+  // Row 2
+  { state: 'OR', row: 2, col: 1 },
+  { state: 'ID', row: 2, col: 2 },
+  { state: 'WY', row: 2, col: 3 },
+  { state: 'SD', row: 2, col: 4 },
+  { state: 'IA', row: 2, col: 5 },
+  { state: 'IL', row: 2, col: 6 },
+  { state: 'IN', row: 2, col: 7 },
+  { state: 'OH', row: 2, col: 8 },
+  { state: 'NY', row: 2, col: 9 },
+  { state: 'MA', row: 2, col: 10 },
+  // Row 3
+  { state: 'NV', row: 3, col: 1 },
+  { state: 'UT', row: 3, col: 2 },
+  { state: 'CO', row: 3, col: 3 },
+  { state: 'NE', row: 3, col: 4 },
+  { state: 'KS', row: 3, col: 5 },
+  { state: 'MO', row: 3, col: 6 },
+  { state: 'KY', row: 3, col: 7 },
+  { state: 'WV', row: 3, col: 8 },
+  { state: 'PA', row: 3, col: 9 },
+  { state: 'NJ', row: 3, col: 10 },
+  { state: 'CT', row: 3, col: 11 },
+  { state: 'RI', row: 3, col: 12 },
+  // Row 4
+  { state: 'CA', row: 4, col: 1 },
+  { state: 'AZ', row: 4, col: 2 },
+  { state: 'NM', row: 4, col: 3 },
+  { state: 'OK', row: 4, col: 4 },
+  { state: 'AR', row: 4, col: 5 },
+  { state: 'TN', row: 4, col: 6 },
+  { state: 'VA', row: 4, col: 7 },
+  { state: 'NC', row: 4, col: 8 },
+  { state: 'MD', row: 4, col: 9 },
+  { state: 'DE', row: 4, col: 10 },
+  // Row 5
+  { state: 'HI', row: 5, col: 0 },
+  { state: 'TX', row: 5, col: 3 },
+  { state: 'LA', row: 5, col: 4 },
+  { state: 'MS', row: 5, col: 5 },
+  { state: 'AL', row: 5, col: 6 },
+  { state: 'GA', row: 5, col: 7 },
+  { state: 'SC', row: 5, col: 8 },
+  { state: 'FL', row: 5, col: 9 },
+  { state: 'DC', row: 5, col: 10 },
+];
+
+// CON states list
+const conStates = ['AL', 'AR', 'CT', 'GA', 'HI', 'IL', 'KY', 'MD', 'MA', 'MI', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NY', 'NC', 'OH', 'OK', 'OR', 'RI', 'SC', 'TN', 'VT', 'VA', 'WA', 'WV', 'WI'];
 
 export function USMapChart({ data }: USMapChartProps) {
   const [hoveredState, setHoveredState] = useState<StateData | null>(null);
 
+  const getStateData = (stateCode: string): StateData | undefined => {
+    return data.find(d => d.state === stateCode);
+  };
+
   const getStateColor = (stateCode: string): string => {
-    const stateData = data.find(d => d.state === stateCode);
+    const stateData = getStateData(stateCode);
     if (!stateData) return 'var(--color-bg-tertiary)';
 
     const greenRate = Number(stateData.green_count) / Number(stateData.total);
 
-    if (greenRate >= 0.1) return 'rgba(16, 185, 129, 0.8)';
-    if (greenRate >= 0.05) return 'rgba(16, 185, 129, 0.5)';
-    if (greenRate >= 0.02) return 'rgba(245, 158, 11, 0.6)';
-    return 'rgba(239, 68, 68, 0.4)';
+    if (greenRate >= 0.10) return 'rgb(16, 185, 129)'; // emerald-500
+    if (greenRate >= 0.07) return 'rgb(52, 211, 153)'; // emerald-400
+    if (greenRate >= 0.05) return 'rgb(110, 231, 183)'; // emerald-300
+    if (greenRate >= 0.03) return 'rgb(251, 191, 36)'; // amber-400
+    return 'rgb(248, 113, 113)'; // red-400
   };
 
-  const getStateData = (stateCode: string): StateData | undefined => {
-    return data.find(d => d.state === stateCode);
-  };
+  const maxCol = Math.max(...stateGrid.map(s => s.col));
+  const maxRow = Math.max(...stateGrid.map(s => s.row));
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className="glass-card rounded-2xl p-6"
+      className="glass-card rounded-2xl p-6 h-full"
     >
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -104,88 +118,117 @@ export function USMapChart({ data }: USMapChartProps) {
           </h3>
           <p className="text-sm text-[var(--color-text-muted)]">Provider density by state</p>
         </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-emerald-500/80"></div>
-            <span className="text-[var(--color-text-muted)]">High GREEN %</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-amber-500/60"></div>
-            <span className="text-[var(--color-text-muted)]">Medium</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-red-500/40"></div>
-            <span className="text-[var(--color-text-muted)]">Low</span>
-          </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 text-xs">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-emerald-500"></div>
+          <span className="text-[var(--color-text-muted)]">&gt;10% GREEN</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-emerald-400"></div>
+          <span className="text-[var(--color-text-muted)]">7-10%</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-emerald-300"></div>
+          <span className="text-[var(--color-text-muted)]">5-7%</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-amber-400"></div>
+          <span className="text-[var(--color-text-muted)]">3-5%</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded-sm bg-red-400"></div>
+          <span className="text-[var(--color-text-muted)]">&lt;3%</span>
+        </div>
+        <div className="flex items-center gap-1 ml-2 pl-2 border-l border-[var(--color-border)]">
+          <div className="w-3 h-3 rounded-sm border-2 border-[var(--color-turquoise-400)] bg-transparent"></div>
+          <span className="text-[var(--color-text-muted)]">CON State</span>
         </div>
       </div>
 
-      <div className="relative">
-        <svg viewBox="0 0 580 320" className="w-full h-auto">
-          {Object.entries(statePaths).map(([stateCode, pathData]) => {
-            const stateData = getStateData(stateCode);
-            return (
-              <g key={stateCode}>
-                <rect
-                  x={parseFloat(pathData.d.split(' ')[1])}
-                  y={parseFloat(pathData.d.split(' ')[2])}
-                  width={parseFloat(pathData.d.split(' ')[4]) - parseFloat(pathData.d.split(' ')[1])}
-                  height={parseFloat(pathData.d.split(' ')[5]) - parseFloat(pathData.d.split(' ')[2])}
-                  fill={getStateColor(stateCode)}
-                  stroke={stateData?.is_con_state ? 'var(--color-turquoise-400)' : 'var(--color-border)'}
-                  strokeWidth={stateData?.is_con_state ? 2 : 1}
-                  rx={3}
-                  className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                  onMouseEnter={() => stateData && setHoveredState(stateData)}
-                  onMouseLeave={() => setHoveredState(null)}
-                />
-                <text
-                  x={pathData.x}
-                  y={pathData.y}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="text-[8px] font-semibold fill-[var(--color-text-primary)] pointer-events-none"
-                >
-                  {stateCode}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+      {/* Grid Map */}
+      <div
+        className="grid gap-1 mb-4"
+        style={{
+          gridTemplateColumns: `repeat(${maxCol + 1}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${maxRow + 1}, minmax(0, 1fr))`
+        }}
+      >
+        {stateGrid.map(({ state, row, col }) => {
+          const stateData = getStateData(state);
+          const isCon = conStates.includes(state);
+          const isHovered = hoveredState?.state === state;
 
-        {hoveredState && (
-          <div className="absolute top-4 right-4 glass-card rounded-lg p-4 border border-[var(--color-border)] min-w-[180px]">
-            <p className="font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
-              {hoveredState.state}
-              {hoveredState.is_con_state && (
-                <span className="text-xs bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-500)] px-2 py-0.5 rounded">CON</span>
-              )}
-            </p>
-            <div className="space-y-1 text-sm">
-              <p className="text-[var(--color-text-secondary)]">
-                Total: <span className="font-mono">{Number(hoveredState.total).toLocaleString()}</span>
-              </p>
-              <p className="text-emerald-500">
-                GREEN: <span className="font-mono">{Number(hoveredState.green_count)}</span>
-              </p>
-              <p className="text-amber-500">
-                YELLOW: <span className="font-mono">{Number(hoveredState.yellow_count)}</span>
-              </p>
-              <p className="text-red-500">
-                RED: <span className="font-mono">{Number(hoveredState.red_count)}</span>
-              </p>
-              <p className="text-[var(--color-text-muted)] pt-1 border-t border-[var(--color-border)]">
-                Avg Score: <span className="font-mono">{hoveredState.avg_score}</span>
-              </p>
-            </div>
-          </div>
-        )}
+          return (
+            <motion.div
+              key={state}
+              style={{ gridRow: row + 1, gridColumn: col + 1 }}
+              className={`
+                aspect-square rounded-md flex items-center justify-center cursor-pointer
+                transition-all duration-200 relative text-[10px] sm:text-xs font-semibold
+                ${isCon ? 'ring-2 ring-[var(--color-turquoise-400)]' : ''}
+                ${isHovered ? 'ring-2 ring-white scale-110 z-10' : ''}
+              `}
+              whileHover={{ scale: 1.1 }}
+              onMouseEnter={() => stateData && setHoveredState(stateData)}
+              onMouseLeave={() => setHoveredState(null)}
+            >
+              <div
+                className="absolute inset-0 rounded-md"
+                style={{ backgroundColor: getStateColor(state) }}
+              />
+              <span className="relative z-10 text-white drop-shadow-md">
+                {state}
+              </span>
+            </motion.div>
+          );
+        })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-[var(--color-border)] flex items-center gap-4">
-        <p className="text-sm text-[var(--color-text-muted)]">
-          <span className="text-[var(--color-turquoise-500)] font-semibold">CON States</span> highlighted with turquoise border
-        </p>
+      {/* Hover Info */}
+      <div className="min-h-[100px] p-4 rounded-xl bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+        {hoveredState ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-lg">{hoveredState.state}</span>
+              {conStates.includes(hoveredState.state) && (
+                <span className="text-xs bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-500)] px-2 py-0.5 rounded font-medium">
+                  CON State
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-sm">
+              <div>
+                <p className="text-[var(--color-text-muted)] text-xs">Total</p>
+                <p className="font-mono font-semibold">{Number(hoveredState.total).toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-emerald-500 text-xs">GREEN</p>
+                <p className="font-mono font-semibold text-emerald-500">{Number(hoveredState.green_count)}</p>
+              </div>
+              <div>
+                <p className="text-amber-500 text-xs">YELLOW</p>
+                <p className="font-mono font-semibold text-amber-500">{Number(hoveredState.yellow_count)}</p>
+              </div>
+              <div>
+                <p className="text-red-500 text-xs">RED</p>
+                <p className="font-mono font-semibold text-red-500">{Number(hoveredState.red_count)}</p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-sm">
+              <span className="text-[var(--color-text-muted)]">GREEN Rate</span>
+              <span className="font-mono font-semibold text-emerald-500">
+                {((Number(hoveredState.green_count) / Number(hoveredState.total)) * 100).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
+            Hover over a state to see details
+          </div>
+        )}
       </div>
     </motion.div>
   );
