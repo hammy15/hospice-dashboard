@@ -40,6 +40,14 @@ export interface HospiceProvider {
   certification_date: string;
   data_source: string;
   analysis_date: string;
+  // Contact information
+  address_line_1: string | null;
+  address_line_2: string | null;
+  zip_code: string | null;
+  phone_number: string | null;
+  website: string | null;
+  administrator_name: string | null;
+  administrator_phone: string | null;
 }
 
 export async function getStats() {

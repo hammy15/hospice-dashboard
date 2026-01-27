@@ -16,6 +16,9 @@ import {
   Target,
   Users,
   FileText,
+  Globe,
+  Mail,
+  User,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -135,6 +138,103 @@ export default async function ProviderDetailPage({ params }: Props) {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="glass-card rounded-2xl p-6 mb-6">
+        <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4 flex items-center gap-2">
+          <Phone className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+          Contact Information
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Address */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+              <MapPin className="w-4 h-4" />
+              <span className="text-sm font-medium">Address</span>
+            </div>
+            <div className="text-[var(--color-text-primary)]">
+              {provider.address_line_1 ? (
+                <>
+                  <p>{provider.address_line_1}</p>
+                  {provider.address_line_2 && <p>{provider.address_line_2}</p>}
+                  <p>{provider.city}, {provider.state} {provider.zip_code}</p>
+                </>
+              ) : (
+                <p className="text-[var(--color-text-muted)] italic">No address on file</p>
+              )}
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+              <Phone className="w-4 h-4" />
+              <span className="text-sm font-medium">Phone</span>
+            </div>
+            <div className="text-[var(--color-text-primary)]">
+              {provider.phone_number ? (
+                <a
+                  href={`tel:${provider.phone_number}`}
+                  className="text-[var(--color-turquoise-400)] hover:underline"
+                >
+                  {provider.phone_number}
+                </a>
+              ) : (
+                <p className="text-[var(--color-text-muted)] italic">No phone on file</p>
+              )}
+            </div>
+          </div>
+
+          {/* Website */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+              <Globe className="w-4 h-4" />
+              <span className="text-sm font-medium">Website</span>
+            </div>
+            <div className="text-[var(--color-text-primary)]">
+              {provider.website ? (
+                <a
+                  href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--color-turquoise-400)] hover:underline break-all"
+                >
+                  {provider.website}
+                </a>
+              ) : (
+                <p className="text-[var(--color-text-muted)] italic">No website on file</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Administrator Contact */}
+        {(provider.administrator_name || provider.administrator_phone) && (
+          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+            <div className="flex items-center gap-2 text-[var(--color-text-muted)] mb-3">
+              <User className="w-4 h-4" />
+              <span className="text-sm font-medium">Administrator</span>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              {provider.administrator_name && (
+                <div>
+                  <p className="text-[var(--color-text-primary)]">{provider.administrator_name}</p>
+                </div>
+              )}
+              {provider.administrator_phone && (
+                <div>
+                  <a
+                    href={`tel:${provider.administrator_phone}`}
+                    className="text-[var(--color-turquoise-400)] hover:underline"
+                  >
+                    {provider.administrator_phone}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
