@@ -63,7 +63,7 @@ export function AdcDistributionChart({ data }: AdcDistributionChartProps) {
           <BarChart
             data={chartData}
             barCategoryGap="20%"
-            onClick={(data) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
+            onClick={(data: any) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
             style={{ cursor: 'pointer' }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />

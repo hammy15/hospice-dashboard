@@ -51,7 +51,7 @@ export function OwnershipChart({ data }: OwnershipChartProps) {
             data={chartData}
             layout="vertical"
             margin={{ left: 20, right: 20 }}
-            onClick={(data) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
+            onClick={(data: any) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
             style={{ cursor: 'pointer' }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />

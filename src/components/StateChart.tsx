@@ -73,7 +73,7 @@ export function StateChart({ data }: StateChartProps) {
             data={chartData}
             layout="vertical"
             margin={{ left: 10, right: 20 }}
-            onClick={(data) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
+            onClick={(data: any) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
             style={{ cursor: 'pointer' }}
           >
             <XAxis type="number" stroke="#64748b" fontSize={12} />

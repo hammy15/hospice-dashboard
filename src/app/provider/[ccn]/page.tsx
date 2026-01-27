@@ -32,16 +32,38 @@ export default async function ProviderDetailPage({ params }: Props) {
     notFound();
   }
 
-  const formatScore = (score: number | null) => {
-    if (score === null) return '—';
-    return score.toFixed(1);
+  const formatScore = (score: number | string | null) => {
+    if (score === null || score === undefined) return '—';
+    const num = typeof score === 'string' ? parseFloat(score) : score;
+    return isNaN(num) ? '—' : num.toFixed(1);
   };
 
-  const getScoreColor = (score: number | null) => {
-    if (score === null) return 'text-[var(--color-text-muted)]';
-    if (score >= 70) return 'text-emerald-400';
-    if (score >= 50) return 'text-amber-400';
+  const getScoreColor = (score: number | string | null) => {
+    if (score === null || score === undefined) return 'text-[var(--color-text-muted)]';
+    const num = typeof score === 'string' ? parseFloat(score) : score;
+    if (isNaN(num)) return 'text-[var(--color-text-muted)]';
+    if (num >= 70) return 'text-emerald-400';
+    if (num >= 50) return 'text-amber-400';
     return 'text-red-400';
+  };
+
+  const formatNumber = (value: number | string | null, decimals: number = 0) => {
+    if (value === null || value === undefined) return '—';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(num) ? '—' : num.toFixed(decimals);
+  };
+
+  const getAdcValue = (adc: number | string | null): number | null => {
+    if (adc === null || adc === undefined) return null;
+    const num = typeof adc === 'string' ? parseFloat(adc) : adc;
+    return isNaN(num) ? null : num;
+  };
+
+  const formatDate = (date: Date | string | null): string => {
+    if (!date) return '—';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -133,8 +155,8 @@ export default async function ProviderDetailPage({ params }: Props) {
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--color-border)]">
               <span className="text-[var(--color-text-muted)]">ADC</span>
-              <span className={provider.estimated_adc && provider.estimated_adc < 60 ? 'text-emerald-400' : ''}>
-                {provider.estimated_adc?.toFixed(0) || '—'}
+              <span className={getAdcValue(provider.estimated_adc) !== null && getAdcValue(provider.estimated_adc)! < 60 ? 'text-emerald-400' : ''}>
+                {formatNumber(provider.estimated_adc, 0)}
               </span>
             </div>
             <div className="flex justify-between py-2 border-b border-[var(--color-border)]">
@@ -151,7 +173,7 @@ export default async function ProviderDetailPage({ params }: Props) {
             </div>
             <div className="flex justify-between py-2">
               <span className="text-[var(--color-text-muted)]">Certified</span>
-              <span>{provider.certification_date || '—'}</span>
+              <span>{formatDate(provider.certification_date)}</span>
             </div>
           </div>
         </div>
@@ -271,7 +293,7 @@ export default async function ProviderDetailPage({ params }: Props) {
           </div>
           <div>
             <p className="text-sm text-[var(--color-text-muted)] mb-1">Confidence</p>
-            <p className="font-medium">{provider.confidence_level || '—'} ({(provider.confidence_score ?? 0).toFixed(2)})</p>
+            <p className="font-medium">{provider.confidence_level || '—'} ({formatNumber(provider.confidence_score, 2)})</p>
           </div>
           <div>
             <p className="text-sm text-[var(--color-text-muted)] mb-1">Missing Data</p>
@@ -282,7 +304,7 @@ export default async function ProviderDetailPage({ params }: Props) {
 
       {/* Footer */}
       <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">
-        Data Source: {provider.data_source} • Analysis Date: {provider.analysis_date}
+        Data Source: {provider.data_source} • Analysis Date: {formatDate(provider.analysis_date)}
       </div>
     </div>
   );
