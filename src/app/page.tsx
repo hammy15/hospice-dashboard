@@ -2,7 +2,6 @@ import { getStats, getStateStats, getTopTargets } from '@/lib/db';
 import { StatCard } from '@/components/StatCard';
 import { StateChart } from '@/components/StateChart';
 import { ProviderTable } from '@/components/ProviderTable';
-import { Target, AlertTriangle, XCircle, Building2, Shield, TrendingUp, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +32,7 @@ export default async function Dashboard() {
           title="GREEN Targets"
           value={Number(stats.green_count).toLocaleString()}
           subtitle="Strong acquisition candidates"
-          icon={Target}
+          icon="target"
           variant="green"
           delay={0}
         />
@@ -41,7 +40,7 @@ export default async function Dashboard() {
           title="YELLOW Targets"
           value={Number(stats.yellow_count).toLocaleString()}
           subtitle="Require further diligence"
-          icon={AlertTriangle}
+          icon="alert-triangle"
           variant="yellow"
           delay={0.1}
         />
@@ -49,7 +48,7 @@ export default async function Dashboard() {
           title="RED Flagged"
           value={Number(stats.red_count).toLocaleString()}
           subtitle="Poor fit or high risk"
-          icon={XCircle}
+          icon="x-circle"
           variant="red"
           delay={0.2}
         />
@@ -57,7 +56,7 @@ export default async function Dashboard() {
           title="CON State GREEN"
           value={Number(stats.green_con_count).toLocaleString()}
           subtitle={`${((Number(stats.green_con_count) / Number(stats.green_count)) * 100).toFixed(0)}% of GREEN targets`}
-          icon={Shield}
+          icon="shield"
           variant="default"
           delay={0.3}
         />
@@ -69,14 +68,14 @@ export default async function Dashboard() {
           title="Avg GREEN ADC"
           value={stats.avg_green_adc || '—'}
           subtitle="Average Daily Census"
-          icon={Building2}
+          icon="building"
           delay={0.4}
         />
         <StatCard
           title="Avg GREEN Score"
           value={stats.avg_green_score || '—'}
           subtitle="Composite quality score"
-          icon={TrendingUp}
+          icon="trending-up"
           delay={0.5}
         />
         <Link href="/washington" className="block">
@@ -84,7 +83,7 @@ export default async function Dashboard() {
             title="Washington State"
             value="7 GREEN"
             subtitle="CON-protected market focus"
-            icon={MapPin}
+            icon="map-pin"
             delay={0.6}
           />
         </Link>

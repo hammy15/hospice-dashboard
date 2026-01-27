@@ -1,18 +1,31 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import { Target, AlertTriangle, XCircle, Building2, Shield, TrendingUp, MapPin } from 'lucide-react';
+
+const iconMap = {
+  target: Target,
+  'alert-triangle': AlertTriangle,
+  'x-circle': XCircle,
+  building: Building2,
+  shield: Shield,
+  'trending-up': TrendingUp,
+  'map-pin': MapPin,
+};
+
+type IconName = keyof typeof iconMap;
 
 interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  icon: LucideIcon;
+  icon: IconName;
   variant?: 'default' | 'green' | 'yellow' | 'red';
   delay?: number;
 }
 
-export function StatCard({ title, value, subtitle, icon: Icon, variant = 'default', delay = 0 }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, variant = 'default', delay = 0 }: StatCardProps) {
+  const Icon = iconMap[icon];
   const variantStyles = {
     default: {
       iconBg: 'bg-[var(--color-turquoise-500)]/10',

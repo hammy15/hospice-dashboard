@@ -47,9 +47,16 @@ export function ProviderTable({ providers, showAllColumns = false }: ProviderTab
     return sortDir === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   };
 
-  const formatScore = (score: number | null) => {
-    if (score === null) return '—';
-    return score.toFixed(1);
+  const formatScore = (score: number | string | null) => {
+    if (score === null || score === undefined) return '—';
+    const num = typeof score === 'string' ? parseFloat(score) : score;
+    return isNaN(num) ? '—' : num.toFixed(1);
+  };
+
+  const formatAdc = (adc: number | string | null) => {
+    if (adc === null || adc === undefined) return null;
+    const num = typeof adc === 'string' ? parseFloat(adc) : adc;
+    return isNaN(num) ? null : num;
   };
 
   return (
@@ -132,11 +139,15 @@ export function ProviderTable({ providers, showAllColumns = false }: ProviderTab
                     <ClassificationBadge classification={provider.classification} />
                   </td>
                   <td className="p-4 text-right font-mono">
-                    {provider.estimated_adc ? (
-                      <span className={provider.estimated_adc < 60 ? 'text-emerald-400' : 'text-[var(--color-text-secondary)]'}>
-                        {provider.estimated_adc.toFixed(0)}
-                      </span>
-                    ) : '—'}
+                    {(() => {
+                      const adc = formatAdc(provider.estimated_adc);
+                      if (adc === null) return '—';
+                      return (
+                        <span className={adc < 60 ? 'text-emerald-400' : 'text-[var(--color-text-secondary)]'}>
+                          {adc.toFixed(0)}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 text-right">
                     <span className="font-mono font-semibold text-[var(--color-turquoise-400)]">

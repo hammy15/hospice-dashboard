@@ -1,7 +1,6 @@
 import { getTopTargets, getStats } from '@/lib/db';
 import { ProviderTable } from '@/components/ProviderTable';
 import { StatCard } from '@/components/StatCard';
-import { Target, TrendingUp, Shield, Building2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,27 +26,27 @@ export default async function GreenPage() {
           title="Total GREEN"
           value={Number(stats.green_count).toLocaleString()}
           subtitle="Acquisition candidates"
-          icon={Target}
+          icon="target"
           variant="green"
         />
         <StatCard
           title="In CON States"
           value={Number(stats.green_con_count).toLocaleString()}
           subtitle="Regulatory moat"
-          icon={Shield}
+          icon="shield"
           variant="default"
         />
         <StatCard
           title="Avg ADC"
           value={stats.avg_green_adc || '—'}
           subtitle="Average Daily Census"
-          icon={Building2}
+          icon="building"
         />
         <StatCard
           title="Avg Score"
           value={stats.avg_green_score || '—'}
           subtitle="Composite quality"
-          icon={TrendingUp}
+          icon="trending-up"
         />
       </div>
 

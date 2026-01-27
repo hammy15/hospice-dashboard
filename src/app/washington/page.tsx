@@ -1,7 +1,7 @@
 import { getWashingtonTargets } from '@/lib/db';
 import { ProviderTable } from '@/components/ProviderTable';
 import { StatCard } from '@/components/StatCard';
-import { MapPin, Target, AlertTriangle, Shield } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,28 +34,28 @@ export default async function WashingtonPage() {
           title="GREEN Targets"
           value={greenCount}
           subtitle="Ready for outreach"
-          icon={Target}
+          icon="target"
           variant="green"
         />
         <StatCard
           title="YELLOW Targets"
           value={yellowCount}
           subtitle="Further diligence needed"
-          icon={AlertTriangle}
+          icon="alert-triangle"
           variant="yellow"
         />
         <StatCard
           title="CON State"
           value="Yes"
           subtitle="Certificate of Need required"
-          icon={Shield}
+          icon="shield"
           variant="default"
         />
         <StatCard
           title="Total Analyzed"
           value={waTargets.length}
           subtitle="GREEN + YELLOW targets"
-          icon={MapPin}
+          icon="map-pin"
         />
       </div>
 
