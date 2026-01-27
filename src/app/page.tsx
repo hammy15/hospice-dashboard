@@ -42,34 +42,38 @@ export default async function Dashboard() {
         <StatCard
           title="GREEN Targets"
           value={Number(stats.green_count).toLocaleString()}
-          subtitle="Strong acquisition candidates"
+          subtitle="Click to view all GREEN"
           icon="target"
           variant="green"
           delay={0}
+          href="/targets?classification=GREEN"
         />
         <StatCard
           title="YELLOW Targets"
           value={Number(stats.yellow_count).toLocaleString()}
-          subtitle="Require further diligence"
+          subtitle="Click to view all YELLOW"
           icon="alert-triangle"
           variant="yellow"
           delay={0.1}
+          href="/targets?classification=YELLOW"
         />
         <StatCard
           title="RED Flagged"
           value={Number(stats.red_count).toLocaleString()}
-          subtitle="Poor fit or high risk"
+          subtitle="Click to view all RED"
           icon="x-circle"
           variant="red"
           delay={0.2}
+          href="/targets?classification=RED"
         />
         <StatCard
           title="CON State GREEN"
           value={Number(stats.green_con_count).toLocaleString()}
-          subtitle={`${((Number(stats.green_con_count) / Number(stats.green_count)) * 100).toFixed(0)}% of GREEN targets`}
+          subtitle="Click to view CON states"
           icon="shield"
           variant="default"
           delay={0.3}
+          href="/targets?classification=GREEN&conStateOnly=true"
         />
       </div>
 
@@ -78,26 +82,27 @@ export default async function Dashboard() {
         <StatCard
           title="Avg GREEN ADC"
           value={stats.avg_green_adc || '—'}
-          subtitle="Average Daily Census"
+          subtitle="Filter by ADC range"
           icon="building"
           delay={0.4}
+          href="/targets?classification=GREEN&maxAdc=60"
         />
         <StatCard
           title="Avg GREEN Score"
           value={stats.avg_green_score || '—'}
-          subtitle="Composite quality score"
+          subtitle="View GREEN targets"
           icon="trending-up"
           delay={0.5}
+          href="/green"
         />
-        <Link href="/washington" className="block">
-          <StatCard
-            title="Washington State"
-            value="7 GREEN"
-            subtitle="CON-protected market focus"
-            icon="map-pin"
-            delay={0.6}
-          />
-        </Link>
+        <StatCard
+          title="Washington State"
+          value="7 GREEN"
+          subtitle="CON-protected market focus"
+          icon="map-pin"
+          delay={0.6}
+          href="/washington"
+        />
       </div>
 
       {/* Charts Row 1 - Map and Pie */}

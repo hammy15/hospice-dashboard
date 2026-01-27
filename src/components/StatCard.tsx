@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Target, AlertTriangle, XCircle, Building2, Shield, TrendingUp, MapPin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const iconMap = {
   target: Target,
@@ -22,9 +23,11 @@ interface StatCardProps {
   icon: IconName;
   variant?: 'default' | 'green' | 'yellow' | 'red';
   delay?: number;
+  href?: string;
 }
 
-export function StatCard({ title, value, subtitle, icon, variant = 'default', delay = 0 }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon, variant = 'default', delay = 0, href }: StatCardProps) {
+  const router = useRouter();
   const Icon = iconMap[icon];
   const variantStyles = {
     default: {
@@ -51,13 +54,22 @@ export function StatCard({ title, value, subtitle, icon, variant = 'default', de
 
   const styles = variantStyles[variant];
 
+  const handleClick = () => {
+    if (href) {
+      router.push(href);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      className="glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300"
+      onClick={handleClick}
+      className={`glass-card glass-card-hover rounded-2xl p-6 transition-all duration-300 ${href ? 'cursor-pointer' : ''}`}
       style={{ boxShadow: `0 0 40px ${styles.glow}` }}
+      whileHover={href ? { scale: 1.02 } : undefined}
+      whileTap={href ? { scale: 0.98 } : undefined}
     >
       <div className="flex items-start justify-between">
         <div>

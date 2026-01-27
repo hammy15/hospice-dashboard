@@ -2,6 +2,7 @@
 
 import { RadialBarChart, RadialBar, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 interface ConData {
   category: string;
@@ -18,10 +19,19 @@ interface ConStateComparisonChartProps {
 }
 
 export function ConStateComparisonChart({ data }: ConStateComparisonChartProps) {
+  const router = useRouter();
   const conData = data.find(d => d.category === 'CON States');
   const nonConData = data.find(d => d.category === 'Non-CON States');
 
   if (!conData || !nonConData) return null;
+
+  const handleConClick = () => {
+    router.push('/targets?conStateOnly=true');
+  };
+
+  const handleNonConClick = () => {
+    router.push('/targets');
+  };
 
   const conGreenRate = (Number(conData.green_count) / Number(conData.total) * 100);
   const nonConGreenRate = (Number(nonConData.green_count) / Number(nonConData.total) * 100);
@@ -49,7 +59,7 @@ export function ConStateComparisonChart({ data }: ConStateComparisonChartProps) 
       <h3 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-2">
         CON vs Non-CON States
       </h3>
-      <p className="text-sm text-[var(--color-text-muted)] mb-4">GREEN rate comparison</p>
+      <p className="text-sm text-[var(--color-text-muted)] mb-4">Click to filter by CON status</p>
 
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
@@ -73,20 +83,26 @@ export function ConStateComparisonChart({ data }: ConStateComparisonChartProps) 
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-4">
-        <div className="text-center p-4 rounded-xl bg-[var(--color-turquoise-500)]/10 border border-[var(--color-turquoise-500)]/30">
+        <button
+          onClick={handleConClick}
+          className="text-center p-4 rounded-xl bg-[var(--color-turquoise-500)]/10 border border-[var(--color-turquoise-500)]/30 hover:bg-[var(--color-turquoise-500)]/20 transition-colors cursor-pointer"
+        >
           <p className="text-2xl font-bold text-[var(--color-turquoise-400)]">{conGreenRate.toFixed(1)}%</p>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">CON States GREEN</p>
           <p className="text-xs text-[var(--color-text-secondary)] mt-2">
             {Number(conData.green_count)} of {Number(conData.total).toLocaleString()}
           </p>
-        </div>
-        <div className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+        </button>
+        <button
+          onClick={handleNonConClick}
+          className="text-center p-4 rounded-xl bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+        >
           <p className="text-2xl font-bold text-[var(--color-text-secondary)]">{nonConGreenRate.toFixed(1)}%</p>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">Non-CON GREEN</p>
           <p className="text-xs text-[var(--color-text-secondary)] mt-2">
             {Number(nonConData.green_count)} of {Number(nonConData.total).toLocaleString()}
           </p>
-        </div>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-[var(--color-border)]">

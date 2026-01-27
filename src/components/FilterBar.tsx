@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface FilterBarProps {
   states: string[];
@@ -13,15 +13,37 @@ interface FilterBarProps {
     conStateOnly?: boolean;
     search?: string;
   }) => void;
+  initialFilters?: {
+    classification?: string;
+    state?: string;
+    minAdc?: string;
+    maxAdc?: string;
+    conStateOnly?: boolean;
+    search?: string;
+  };
 }
 
-export function FilterBar({ states, onFilterChange }: FilterBarProps) {
-  const [classification, setClassification] = useState<string>('');
-  const [state, setState] = useState<string>('');
-  const [minAdc, setMinAdc] = useState<string>('');
-  const [maxAdc, setMaxAdc] = useState<string>('');
-  const [conStateOnly, setConStateOnly] = useState(false);
-  const [search, setSearch] = useState('');
+export function FilterBar({ states, onFilterChange, initialFilters }: FilterBarProps) {
+  const [classification, setClassification] = useState<string>(initialFilters?.classification || '');
+  const [state, setState] = useState<string>(initialFilters?.state || '');
+  const [minAdc, setMinAdc] = useState<string>(initialFilters?.minAdc || '');
+  const [maxAdc, setMaxAdc] = useState<string>(initialFilters?.maxAdc || '');
+  const [conStateOnly, setConStateOnly] = useState(initialFilters?.conStateOnly || false);
+  const [search, setSearch] = useState(initialFilters?.search || '');
+  const [initialized, setInitialized] = useState(false);
+
+  // Apply initial filters on mount
+  useEffect(() => {
+    if (!initialized && initialFilters) {
+      if (initialFilters.classification) setClassification(initialFilters.classification);
+      if (initialFilters.state) setState(initialFilters.state);
+      if (initialFilters.minAdc) setMinAdc(initialFilters.minAdc);
+      if (initialFilters.maxAdc) setMaxAdc(initialFilters.maxAdc);
+      if (initialFilters.conStateOnly) setConStateOnly(initialFilters.conStateOnly);
+      if (initialFilters.search) setSearch(initialFilters.search);
+      setInitialized(true);
+    }
+  }, [initialFilters, initialized]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -45,6 +67,8 @@ export function FilterBar({ states, onFilterChange }: FilterBarProps) {
     setMaxAdc('');
     setConStateOnly(false);
     setSearch('');
+    // Update URL without filters
+    window.history.replaceState({}, '', '/targets');
   };
 
   const hasFilters = classification || state || minAdc || maxAdc || conStateOnly || search;

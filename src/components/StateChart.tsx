@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 interface StateData {
   state: string;
@@ -17,12 +18,21 @@ interface StateChartProps {
 }
 
 export function StateChart({ data }: StateChartProps) {
+  const router = useRouter();
+
   const chartData = data.slice(0, 15).map(d => ({
     state: d.state + (d.is_con_state ? '*' : ''),
+    stateCode: d.state,
     GREEN: Number(d.green_count),
     YELLOW: Number(d.yellow_count),
     isCon: d.is_con_state,
   }));
+
+  const handleBarClick = (data: any) => {
+    if (data && data.stateCode) {
+      router.push(`/targets?state=${data.stateCode}`);
+    }
+  };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -55,11 +65,17 @@ export function StateChart({ data }: StateChartProps) {
         Targets by State
       </h3>
       <p className="text-sm text-[var(--color-text-muted)] mb-4">
-        * indicates CON state
+        * indicates CON state • Click to drill down
       </p>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ left: 10, right: 20 }}
+            onClick={(data) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
+            style={{ cursor: 'pointer' }}
+          >
             <XAxis type="number" stroke="#64748b" fontSize={12} />
             <YAxis
               dataKey="state"
@@ -76,14 +92,15 @@ export function StateChart({ data }: StateChartProps) {
                   fill={payload.value.endsWith('*') ? '#00e5c7' : '#94a3b8'}
                   fontSize={12}
                   fontWeight={payload.value.endsWith('*') ? 600 : 400}
+                  style={{ cursor: 'pointer' }}
                 >
                   {payload.value}
                 </text>
               )}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 229, 199, 0.05)' }} />
-            <Bar dataKey="GREEN" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="YELLOW" stackId="a" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 229, 199, 0.1)' }} />
+            <Bar dataKey="GREEN" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} style={{ cursor: 'pointer' }} />
+            <Bar dataKey="YELLOW" stackId="a" fill="#f59e0b" radius={[0, 4, 4, 0]} style={{ cursor: 'pointer' }} />
           </BarChart>
         </ResponsiveContainer>
       </div>

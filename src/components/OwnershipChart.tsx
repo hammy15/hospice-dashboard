@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 interface OwnershipData {
   type: string;
@@ -16,6 +17,8 @@ interface OwnershipChartProps {
 }
 
 export function OwnershipChart({ data }: OwnershipChartProps) {
+  const router = useRouter();
+
   const chartData = data.map(d => ({
     name: d.type.length > 20 ? d.type.substring(0, 20) + '...' : d.type,
     fullName: d.type,
@@ -23,6 +26,12 @@ export function OwnershipChart({ data }: OwnershipChartProps) {
     green: Number(d.green_count),
     greenRate: Number(d.total) > 0 ? (Number(d.green_count) / Number(d.total) * 100).toFixed(1) : '0',
   }));
+
+  const handleBarClick = (data: any) => {
+    if (data && data.fullName) {
+      router.push(`/targets?search=${encodeURIComponent(data.fullName)}`);
+    }
+  };
 
   return (
     <motion.div
@@ -34,7 +43,7 @@ export function OwnershipChart({ data }: OwnershipChartProps) {
       <h3 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-2">
         Ownership Types
       </h3>
-      <p className="text-sm text-[var(--color-text-muted)] mb-4">Provider count by CMS ownership classification</p>
+      <p className="text-sm text-[var(--color-text-muted)] mb-4">Click to filter by ownership type</p>
 
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -42,6 +51,8 @@ export function OwnershipChart({ data }: OwnershipChartProps) {
             data={chartData}
             layout="vertical"
             margin={{ left: 20, right: 20 }}
+            onClick={(data) => data?.activePayload?.[0]?.payload && handleBarClick(data.activePayload[0].payload)}
+            style={{ cursor: 'pointer' }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
             <XAxis
@@ -80,6 +91,7 @@ export function OwnershipChart({ data }: OwnershipChartProps) {
                 <Cell
                   key={`cell-${index}`}
                   fill={`rgba(0, 229, 199, ${0.3 + (parseFloat(entry.greenRate) / 100) * 0.7})`}
+                  style={{ cursor: 'pointer' }}
                 />
               ))}
             </Bar>

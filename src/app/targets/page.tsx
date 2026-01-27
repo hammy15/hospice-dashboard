@@ -1,16 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProviderTable } from '@/components/ProviderTable';
 import { FilterBar } from '@/components/FilterBar';
 import { HospiceProvider } from '@/lib/db';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
-export default function TargetsPage() {
+function TargetsContent() {
+  const searchParams = useSearchParams();
   const [providers, setProviders] = useState<HospiceProvider[]>([]);
   const [states, setStates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+
+  // Get initial filters from URL
+  const initialFilters = {
+    classification: searchParams.get('classification') || undefined,
+    state: searchParams.get('state') || undefined,
+    minAdc: searchParams.get('minAdc') || undefined,
+    maxAdc: searchParams.get('maxAdc') || undefined,
+    conStateOnly: searchParams.get('conStateOnly') === 'true',
+    search: searchParams.get('search') || undefined,
+  };
+
+  const activeState = searchParams.get('state');
 
   useEffect(() => {
     fetch('/api/states')
@@ -42,21 +57,39 @@ export default function TargetsPage() {
   }, []);
 
   useEffect(() => {
-    fetchProviders({});
-  }, [fetchProviders]);
+    fetchProviders(initialFilters);
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6">
+      {activeState && (
+        <Link
+          href="/targets"
+          className="inline-flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-turquoise-400)] transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to All Targets
+        </Link>
+      )}
+
       <div className="mb-8">
         <h1 className="text-4xl font-bold font-[family-name:var(--font-display)] mb-2">
-          <span className="gradient-text">All Targets</span>
+          <span className="gradient-text">
+            {activeState ? `${activeState} Providers` : 'All Targets'}
+          </span>
         </h1>
         <p className="text-[var(--color-text-secondary)] text-lg">
-          Browse and filter all 6,970 hospice providers
+          {activeState
+            ? `Hospice providers in ${activeState}`
+            : 'Browse and filter all 6,970 hospice providers'}
         </p>
       </div>
 
-      <FilterBar states={states} onFilterChange={fetchProviders} />
+      <FilterBar
+        states={states}
+        onFilterChange={fetchProviders}
+        initialFilters={initialFilters}
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -71,5 +104,17 @@ export default function TargetsPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function TargetsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-[var(--color-turquoise-400)] animate-spin" />
+      </div>
+    }>
+      <TargetsContent />
+    </Suspense>
   );
 }

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface StateData {
   state: string;
@@ -83,6 +84,11 @@ const conStates = ['AL', 'AR', 'CT', 'GA', 'HI', 'IL', 'KY', 'MD', 'MA', 'MI', '
 
 export function USMapChart({ data }: USMapChartProps) {
   const [hoveredState, setHoveredState] = useState<StateData | null>(null);
+  const router = useRouter();
+
+  const handleStateClick = (stateCode: string) => {
+    router.push(`/targets?state=${stateCode}`);
+  };
 
   const getStateData = (stateCode: string): StateData | undefined => {
     return data.find(d => d.state === stateCode);
@@ -116,7 +122,7 @@ export function USMapChart({ data }: USMapChartProps) {
           <h3 className="text-lg font-semibold font-[family-name:var(--font-display)]">
             Geographic Distribution
           </h3>
-          <p className="text-sm text-[var(--color-text-muted)]">Provider density by state</p>
+          <p className="text-sm text-[var(--color-text-muted)]">Click a state to drill down</p>
         </div>
       </div>
 
@@ -172,6 +178,8 @@ export function USMapChart({ data }: USMapChartProps) {
                 ${isHovered ? 'ring-2 ring-white scale-110 z-10' : ''}
               `}
               whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleStateClick(state)}
               onMouseEnter={() => stateData && setHoveredState(stateData)}
               onMouseLeave={() => setHoveredState(null)}
             >
