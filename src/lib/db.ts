@@ -202,3 +202,119 @@ export async function getConStateComparison() {
     GROUP BY con_state
   `;
 }
+
+export async function getMarketTargets(state: string) {
+  return await sql`
+    SELECT * FROM hospice_providers
+    WHERE UPPER(state) = ${state.toUpperCase()} AND classification IN ('GREEN', 'YELLOW')
+    ORDER BY
+      CASE classification WHEN 'GREEN' THEN 1 ELSE 2 END,
+      overall_score DESC
+  `;
+}
+
+export async function getMarketStats(state: string) {
+  const result = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count,
+      COUNT(*) as total_count,
+      ROUND(AVG(estimated_adc) FILTER (WHERE classification = 'GREEN'), 1) as avg_green_adc,
+      ROUND(AVG(overall_score) FILTER (WHERE classification = 'GREEN'), 1) as avg_green_score,
+      BOOL_OR(con_state) as is_con_state,
+      COUNT(DISTINCT city) as city_count,
+      COUNT(*) FILTER (WHERE website IS NOT NULL) as with_website,
+      COUNT(*) FILTER (WHERE phone_number IS NOT NULL) as with_phone
+    FROM hospice_providers
+    WHERE UPPER(state) = ${state.toUpperCase()}
+  `;
+  return result[0];
+}
+
+export async function getMarketCityBreakdown(state: string) {
+  return await sql`
+    SELECT
+      city,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) as total
+    FROM hospice_providers
+    WHERE UPPER(state) = ${state.toUpperCase()} AND classification IN ('GREEN', 'YELLOW')
+    GROUP BY city
+    ORDER BY green_count DESC, total DESC
+    LIMIT 15
+  `;
+}
+
+export async function getRelatedProviders(ccn: string, state: string, city: string, limit = 5) {
+  return await sql`
+    SELECT ccn, provider_name, city, state, classification, overall_score, estimated_adc
+    FROM hospice_providers
+    WHERE ccn != ${ccn}
+      AND state = ${state}
+      AND classification IN ('GREEN', 'YELLOW')
+    ORDER BY
+      CASE WHEN city = ${city} THEN 0 ELSE 1 END,
+      CASE classification WHEN 'GREEN' THEN 1 ELSE 2 END,
+      overall_score DESC
+    LIMIT ${limit}
+  `;
+}
+
+export async function getProvidersByFilter(filters: {
+  state?: string;
+  city?: string;
+  classification?: string;
+  minAdc?: number;
+  maxAdc?: number;
+  conStateOnly?: boolean;
+  limit?: number;
+  offset?: number;
+}) {
+  const {
+    state,
+    city,
+    classification,
+    minAdc,
+    maxAdc,
+    conStateOnly,
+    limit = 50,
+    offset = 0,
+  } = filters;
+
+  // Build dynamic query
+  let query = sql`
+    SELECT * FROM hospice_providers
+    WHERE 1=1
+  `;
+
+  if (state) {
+    query = sql`${query} AND UPPER(state) = ${state.toUpperCase()}`;
+  }
+  if (city) {
+    query = sql`${query} AND LOWER(city) = ${city.toLowerCase()}`;
+  }
+  if (classification) {
+    query = sql`${query} AND classification = ${classification}`;
+  }
+  if (minAdc !== undefined) {
+    query = sql`${query} AND estimated_adc >= ${minAdc}`;
+  }
+  if (maxAdc !== undefined) {
+    query = sql`${query} AND estimated_adc <= ${maxAdc}`;
+  }
+  if (conStateOnly) {
+    query = sql`${query} AND con_state = true`;
+  }
+
+  query = sql`${query}
+    ORDER BY
+      CASE classification WHEN 'GREEN' THEN 1 WHEN 'YELLOW' THEN 2 ELSE 3 END,
+      overall_score DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `;
+
+  return await query;
+}

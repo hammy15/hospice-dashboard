@@ -1,4 +1,4 @@
-import { getProvider } from '@/lib/db';
+import { getProvider, getRelatedProviders } from '@/lib/db';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 import { WatchlistButton } from '@/components/WatchlistButton';
 import { notFound } from 'next/navigation';
@@ -20,6 +20,10 @@ import {
   Globe,
   Mail,
   User,
+  ChevronRight,
+  ExternalLink,
+  Copy,
+  Flame,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +39,8 @@ export default async function ProviderDetailPage({ params }: Props) {
   if (!provider) {
     notFound();
   }
+
+  const relatedProviders = await getRelatedProviders(ccn, provider.state, provider.city);
 
   const formatScore = (score: number | string | null) => {
     if (score === null || score === undefined) return '—';
@@ -70,15 +76,71 @@ export default async function ProviderDetailPage({ params }: Props) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  const hotMarkets = ['WA', 'OR', 'CA', 'MT', 'NV'];
+  const isHotMarket = hotMarkets.includes(provider.state);
+
   return (
     <div className="max-w-5xl mx-auto px-6">
-      <Link
-        href="/targets"
-        className="inline-flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-turquoise-400)] transition-colors mb-6"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Targets
-      </Link>
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-2 text-sm mb-6 flex-wrap">
+        <Link href="/" className="text-[var(--color-text-muted)] hover:text-[var(--color-turquoise-400)] transition-colors">
+          Dashboard
+        </Link>
+        <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
+        <Link href="/targets" className="text-[var(--color-text-muted)] hover:text-[var(--color-turquoise-400)] transition-colors">
+          All Targets
+        </Link>
+        <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
+        <Link
+          href={isHotMarket ? `/market/${provider.state.toLowerCase()}` : `/targets?state=${provider.state}`}
+          className="text-[var(--color-text-muted)] hover:text-[var(--color-turquoise-400)] transition-colors flex items-center gap-1"
+        >
+          {provider.state}
+          {isHotMarket && <Flame className="w-3 h-3 text-orange-400" />}
+        </Link>
+        <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
+        <span className="text-[var(--color-text-primary)] font-medium truncate max-w-[200px]">
+          {provider.provider_name}
+        </span>
+      </nav>
+
+      {/* Quick Actions Bar */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Link
+          href={`/targets?state=${provider.state}&classification=${provider.classification}`}
+          className="px-3 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] text-sm transition-colors flex items-center gap-1.5"
+        >
+          <MapPin className="w-3.5 h-3.5" />
+          More in {provider.state}
+        </Link>
+        <Link
+          href={`/targets?state=${provider.state}&city=${encodeURIComponent(provider.city)}`}
+          className="px-3 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] text-sm transition-colors flex items-center gap-1.5"
+        >
+          <Building2 className="w-3.5 h-3.5" />
+          More in {provider.city}
+        </Link>
+        {provider.classification === 'GREEN' && (
+          <Link
+            href="/green"
+            className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-sm hover:bg-emerald-500/30 transition-colors flex items-center gap-1.5"
+          >
+            <Target className="w-3.5 h-3.5" />
+            All GREEN
+          </Link>
+        )}
+        {provider.website && (
+          <a
+            href={provider.website.startsWith('http') ? provider.website : `https://${provider.website}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-lg bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-400)] text-sm hover:bg-[var(--color-turquoise-500)]/30 transition-colors flex items-center gap-1.5"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Visit Website
+          </a>
+        )}
+      </div>
 
       {/* Header */}
       <div className="glass-card rounded-2xl p-8 mb-6">
@@ -381,7 +443,7 @@ export default async function ProviderDetailPage({ params }: Props) {
       </div>
 
       {/* Data Quality */}
-      <div className="glass-card rounded-2xl p-6">
+      <div className="glass-card rounded-2xl p-6 mb-6">
         <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4">
           Data Quality & Follow-up
         </h2>
@@ -405,6 +467,61 @@ export default async function ProviderDetailPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Related Providers */}
+      {relatedProviders.length > 0 && (
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] flex items-center gap-2">
+              <Users className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+              Related Targets in {provider.state}
+            </h2>
+            <Link
+              href={`/targets?state=${provider.state}`}
+              className="text-sm text-[var(--color-turquoise-400)] hover:underline"
+            >
+              View All →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {(relatedProviders as any[]).map((related) => (
+              <Link
+                key={related.ccn}
+                href={`/provider/${related.ccn}`}
+                className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    related.classification === 'GREEN' ? 'bg-emerald-400' : 'bg-amber-400'
+                  }`} />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate group-hover:text-[var(--color-turquoise-400)] transition-colors">
+                      {related.provider_name}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {related.city}, {related.state}
+                      {related.city === provider.city && (
+                        <span className="ml-2 text-[var(--color-turquoise-400)]">Same City</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{Number(related.overall_score).toFixed(1)}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Score</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{related.estimated_adc || '—'}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">ADC</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-turquoise-400)] transition-colors" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">
