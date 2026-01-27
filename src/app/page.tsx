@@ -8,6 +8,7 @@ import { OwnershipChart } from '@/components/OwnershipChart';
 import { USMapChart } from '@/components/USMapChart';
 import { ScoreDistributionChart } from '@/components/ScoreDistributionChart';
 import { ConStateComparisonChart } from '@/components/ConStateComparisonChart';
+import { ScoringCriteriaPanel } from '@/components/ScoringCriteriaPanel';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,11 @@ export default async function Dashboard() {
           delay={0.6}
           href="/washington"
         />
+      </div>
+
+      {/* Scoring Criteria Panel */}
+      <div className="mb-8">
+        <ScoringCriteriaPanel />
       </div>
 
       {/* Charts Row 1 - Map and Pie */}
