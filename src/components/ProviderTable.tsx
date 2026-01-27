@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, ExternalLink, MapPin, Building2, TrendingUp } from 'lucide-react';
 import { ClassificationBadge } from './ClassificationBadge';
@@ -107,9 +107,8 @@ export function ProviderTable({ providers, showAllColumns = false }: ProviderTab
           </thead>
           <tbody>
             {sortedProviders.map((provider, index) => (
-              <>
+              <React.Fragment key={provider.ccn}>
                 <motion.tr
-                  key={provider.ccn}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.02 }}
@@ -220,7 +219,7 @@ export function ProviderTable({ providers, showAllColumns = false }: ProviderTab
                     </td>
                   </motion.tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

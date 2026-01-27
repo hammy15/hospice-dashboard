@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Hospice Acquisition Intelligence",
@@ -13,12 +14,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className="antialiased mesh-bg min-h-screen">
-        <Navigation />
-        <main className="pt-20 pb-12">
-          {children}
-        </main>
+        <ThemeProvider>
+          <Navigation />
+          <main className="pt-20 pb-12">
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,17 +1,28 @@
-import { getStats, getStateStats, getTopTargets } from '@/lib/db';
+import { getStats, getStateStats, getTopTargets, getOwnershipStats, getAdcDistribution, getScoreDistribution, getMapData, getConStateComparison } from '@/lib/db';
 import { StatCard } from '@/components/StatCard';
 import { StateChart } from '@/components/StateChart';
 import { ProviderTable } from '@/components/ProviderTable';
+import { ClassificationPieChart } from '@/components/ClassificationPieChart';
+import { AdcDistributionChart } from '@/components/AdcDistributionChart';
+import { OwnershipChart } from '@/components/OwnershipChart';
+import { USMapChart } from '@/components/USMapChart';
+import { ScoreDistributionChart } from '@/components/ScoreDistributionChart';
+import { ConStateComparisonChart } from '@/components/ConStateComparisonChart';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function Dashboard() {
-  const [stats, stateStats, topTargets] = await Promise.all([
+  const [stats, stateStats, topTargets, ownershipStats, adcDistribution, scoreDistribution, mapData, conComparison] = await Promise.all([
     getStats(),
     getStateStats(),
     getTopTargets(10),
+    getOwnershipStats(),
+    getAdcDistribution(),
+    getScoreDistribution(),
+    getMapData(),
+    getConStateComparison(),
   ]);
 
   return (
@@ -89,9 +100,33 @@ export default async function Dashboard() {
         </Link>
       </div>
 
-      {/* Charts and Tables */}
+      {/* Charts Row 1 - Map and Pie */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          <USMapChart data={mapData as any} />
+        </div>
+        <ClassificationPieChart
+          greenCount={Number(stats.green_count)}
+          yellowCount={Number(stats.yellow_count)}
+          redCount={Number(stats.red_count)}
+        />
+      </div>
+
+      {/* Charts Row 2 - Bar Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <AdcDistributionChart data={adcDistribution as any} />
+        <ScoreDistributionChart data={scoreDistribution as any} />
+      </div>
+
+      {/* Charts Row 3 - State and Ownership */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <StateChart data={stateStats as any} />
+        <OwnershipChart data={ownershipStats as any} />
+      </div>
+
+      {/* Charts Row 4 - CON Comparison and Quick Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <ConStateComparisonChart data={conComparison as any} />
 
         <div className="glass-card rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -110,19 +145,19 @@ export default async function Dashboard() {
             </div>
             <div className="flex justify-between items-center py-3 border-b border-[var(--color-border)]">
               <span className="text-[var(--color-text-secondary)]">GREEN Rate</span>
-              <span className="font-mono font-semibold text-emerald-400">
+              <span className="font-mono font-semibold text-emerald-500">
                 {((Number(stats.green_count) / Number(stats.total_count)) * 100).toFixed(1)}%
               </span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-[var(--color-border)]">
               <span className="text-[var(--color-text-secondary)]">YELLOW Rate</span>
-              <span className="font-mono font-semibold text-amber-400">
+              <span className="font-mono font-semibold text-amber-500">
                 {((Number(stats.yellow_count) / Number(stats.total_count)) * 100).toFixed(1)}%
               </span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-[var(--color-border)]">
               <span className="text-[var(--color-text-secondary)]">CON State Coverage</span>
-              <span className="font-mono font-semibold text-[var(--color-turquoise-400)]">
+              <span className="font-mono font-semibold text-[var(--color-turquoise-600)]">
                 {((Number(stats.green_con_count) / Number(stats.green_count)) * 100).toFixed(0)}%
               </span>
             </div>
@@ -145,7 +180,7 @@ export default async function Dashboard() {
           </div>
           <Link
             href="/green"
-            className="px-4 py-2 rounded-lg bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-400)] font-medium text-sm hover:bg-[var(--color-turquoise-500)]/20 transition-colors"
+            className="px-4 py-2 rounded-lg bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-600)] font-medium text-sm hover:bg-[var(--color-turquoise-500)]/20 transition-colors"
           >
             View All GREEN →
           </Link>

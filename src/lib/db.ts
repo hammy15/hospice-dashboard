@@ -104,3 +104,93 @@ export async function getStates() {
     SELECT DISTINCT state FROM hospice_providers ORDER BY state
   `;
 }
+
+export async function getOwnershipStats() {
+  return await sql`
+    SELECT
+      ownership_type_cms as type,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count
+    FROM hospice_providers
+    WHERE ownership_type_cms IS NOT NULL AND ownership_type_cms != ''
+    GROUP BY ownership_type_cms
+    ORDER BY total DESC
+    LIMIT 10
+  `;
+}
+
+export async function getAdcDistribution() {
+  return await sql`
+    SELECT
+      CASE
+        WHEN estimated_adc < 20 THEN '0-20'
+        WHEN estimated_adc < 40 THEN '20-40'
+        WHEN estimated_adc < 60 THEN '40-60'
+        WHEN estimated_adc < 80 THEN '60-80'
+        WHEN estimated_adc < 100 THEN '80-100'
+        ELSE '100+'
+      END as range,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count
+    FROM hospice_providers
+    WHERE estimated_adc IS NOT NULL
+    GROUP BY 1
+    ORDER BY MIN(estimated_adc)
+  `;
+}
+
+export async function getScoreDistribution() {
+  return await sql`
+    SELECT
+      CASE
+        WHEN overall_score < 30 THEN '0-30'
+        WHEN overall_score < 50 THEN '30-50'
+        WHEN overall_score < 70 THEN '50-70'
+        WHEN overall_score < 85 THEN '70-85'
+        ELSE '85-100'
+      END as range,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count
+    FROM hospice_providers
+    WHERE overall_score IS NOT NULL
+    GROUP BY 1
+    ORDER BY MIN(overall_score)
+  `;
+}
+
+export async function getMapData() {
+  return await sql`
+    SELECT
+      state,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count,
+      BOOL_OR(con_state) as is_con_state,
+      ROUND(AVG(overall_score), 1) as avg_score
+    FROM hospice_providers
+    GROUP BY state
+    ORDER BY state
+  `;
+}
+
+export async function getConStateComparison() {
+  return await sql`
+    SELECT
+      CASE WHEN con_state THEN 'CON States' ELSE 'Non-CON States' END as category,
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count,
+      COUNT(*) FILTER (WHERE classification = 'RED') as red_count,
+      ROUND(AVG(overall_score), 1) as avg_score,
+      ROUND(AVG(estimated_adc), 1) as avg_adc
+    FROM hospice_providers
+    GROUP BY con_state
+  `;
+}
