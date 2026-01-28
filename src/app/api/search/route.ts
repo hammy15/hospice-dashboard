@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { Pool } from '@neondatabase/serverless';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
   try {
     const filters = await request.json();
 
@@ -186,8 +188,8 @@ export async function POST(request: NextRequest) {
 
     // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM hospice_providers WHERE ${whereClause}`;
-    const countResult = await sql.apply(null, [countQuery, ...params] as any);
-    const total = Number(countResult[0]?.total || 0);
+    const countResult = await pool.query(countQuery, params);
+    const total = Number(countResult.rows[0]?.total || 0);
 
     // Get results
     const query = `
@@ -211,7 +213,8 @@ export async function POST(request: NextRequest) {
       OFFSET ${offset}
     `;
 
-    const results = await sql.apply(null, [query, ...params] as any);
+    const queryResult = await pool.query(query, params);
+    const results = queryResult.rows;
 
     // Get aggregates for the filtered results
     const aggregateQuery = `
@@ -228,7 +231,10 @@ export async function POST(request: NextRequest) {
       FROM hospice_providers
       WHERE ${whereClause}
     `;
-    const aggregates = await sql.apply(null, [aggregateQuery, ...params] as any);
+    const aggregatesResult = await pool.query(aggregateQuery, params);
+    const aggregates = aggregatesResult.rows;
+
+    await pool.end();
 
     return NextResponse.json({
       results,
@@ -239,6 +245,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Search API error:', error);
+    await pool.end();
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }
 }

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search } from 'lucide-react';
+import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useState, useRef, useEffect } from 'react';
 
@@ -17,6 +17,7 @@ const hotMarkets = [
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/top-10', label: 'Top 10', icon: Trophy },
   { href: '/targets', label: 'All Targets', icon: List },
   { href: '/green', label: 'GREEN', icon: Target },
   { href: '/map', label: 'Map', icon: Map },
@@ -53,9 +54,9 @@ export function Navigation() {
             </div>
             <div>
               <h1 className="font-[family-name:var(--font-display)] font-bold text-lg leading-tight">
-                Hospice Intel
+                Hospice Tracker
               </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">Acquisition Engine</p>
+              <p className="text-xs text-[var(--color-text-muted)]">M&A Intelligence Platform</p>
             </div>
           </Link>
 

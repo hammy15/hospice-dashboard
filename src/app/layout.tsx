@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navigation } from "@/components/Navigation";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "Hospice Acquisition Intelligence",
-  description: "Decision-grade hospice acquisition target analysis and intelligence platform",
+  title: "Hospice Tracker | M&A Intelligence Platform",
+  description: "Real-time hospice acquisition intelligence. Track targets, analyze markets, and close deals faster.",
+  keywords: ["hospice", "M&A", "acquisition", "healthcare", "private equity", "due diligence"],
+  openGraph: {
+    title: "Hospice Tracker",
+    description: "Real-time hospice acquisition intelligence platform",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -15,12 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
-      <body className="antialiased mesh-bg min-h-screen">
+      <body className="antialiased min-h-screen">
         <ThemeProvider>
-          <Navigation />
-          <main className="pt-20 pb-12">
-            {children}
-          </main>
+          <AppShell>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>
