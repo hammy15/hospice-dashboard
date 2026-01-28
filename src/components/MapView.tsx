@@ -25,6 +25,10 @@ const Circle = dynamic(
   () => import('react-leaflet').then((mod) => mod.Circle),
   { ssr: false }
 );
+const GeoJSON = dynamic(
+  () => import('react-leaflet').then((mod) => mod.GeoJSON),
+  { ssr: false }
+);
 
 interface Provider {
   ccn: string;
@@ -63,6 +67,7 @@ export function MapView({ showHeatmap = true, classification = 'ALL', onProvider
   const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+  const [statesGeoJson, setStatesGeoJson] = useState<any>(null);
 
   useEffect(() => {
     // Load Leaflet CSS
@@ -70,11 +75,46 @@ export function MapView({ showHeatmap = true, classification = 'ALL', onProvider
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(link);
+
+    // Add pulsing animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse-green {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.3); opacity: 1; }
+      }
+      @keyframes pulse-yellow {
+        0%, 100% { transform: scale(1); opacity: 0.9; }
+        50% { transform: scale(1.2); opacity: 1; }
+      }
+      .pulse-green-marker {
+        animation: pulse-green 2s ease-in-out infinite;
+      }
+      .pulse-yellow-marker {
+        animation: pulse-yellow 2.5s ease-in-out infinite;
+      }
+    `;
+    document.head.appendChild(style);
     setMapReady(true);
 
     return () => {
       document.head.removeChild(link);
+      document.head.removeChild(style);
     };
+  }, []);
+
+  useEffect(() => {
+    // Fetch US States GeoJSON
+    async function fetchStates() {
+      try {
+        const response = await fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json');
+        const data = await response.json();
+        setStatesGeoJson(data);
+      } catch (error) {
+        console.error('Error fetching states GeoJSON:', error);
+      }
+    }
+    fetchStates();
   }, []);
 
   useEffect(() => {
@@ -105,6 +145,28 @@ export function MapView({ showHeatmap = true, classification = 'ALL', onProvider
     [providers]
   );
 
+  // Calculate top 5% thresholds for pulsing markers
+  const { greenTop5Threshold, yellowTop5Threshold } = useMemo(() => {
+    const sortedGreen = [...greenProviders].sort((a, b) => b.overall_score - a.overall_score);
+    const sortedYellow = [...yellowProviders].sort((a, b) => b.overall_score - a.overall_score);
+
+    const greenTop5Index = Math.ceil(sortedGreen.length * 0.05);
+    const yellowTop5Index = Math.ceil(sortedYellow.length * 0.05);
+
+    return {
+      greenTop5Threshold: sortedGreen[greenTop5Index]?.overall_score || 100,
+      yellowTop5Threshold: sortedYellow[yellowTop5Index]?.overall_score || 100,
+    };
+  }, [greenProviders, yellowProviders]);
+
+  const stateStyle = {
+    fillColor: 'transparent',
+    fillOpacity: 0,
+    color: '#4b5563',
+    weight: 1,
+    opacity: 0.6,
+  };
+
   if (loading || !mapReady) {
     return (
       <div className="w-full h-[600px] rounded-2xl bg-[var(--color-bg-secondary)] flex items-center justify-center">
@@ -129,6 +191,11 @@ export function MapView({ showHeatmap = true, classification = 'ALL', onProvider
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
+        {/* State Outlines */}
+        {statesGeoJson && (
+          <GeoJSON data={statesGeoJson} style={stateStyle} />
+        )}
+
         {/* Heatmap Layer - 65+ Population */}
         {showHeatmap &&
           heatmapData.map((point) => (
@@ -145,66 +212,78 @@ export function MapView({ showHeatmap = true, classification = 'ALL', onProvider
           ))}
 
         {/* YELLOW Markers (render first so GREEN appears on top) */}
-        {yellowProviders.map((provider) => (
-          <CircleMarker
-            key={provider.ccn}
-            center={[provider.latitude, provider.longitude]}
-            radius={6}
-            pathOptions={{
-              fillColor: '#f59e0b',
-              fillOpacity: 0.9,
-              color: '#d97706',
-              weight: 2,
-            }}
-            eventHandlers={{
-              click: () => onProviderClick?.(provider.ccn),
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <p className="font-bold text-amber-600">{provider.provider_name}</p>
-                <p className="text-gray-600">
-                  {provider.city}, {provider.state}
-                </p>
-                <p className="text-gray-500">
-                  Score: {provider.overall_score} | ADC: {provider.estimated_adc || 'N/A'}
-                </p>
-                <p className="text-xs text-amber-500 font-medium mt-1">YELLOW - Click for details</p>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+        {yellowProviders.map((provider) => {
+          const isTop5 = provider.overall_score >= yellowTop5Threshold;
+          return (
+            <CircleMarker
+              key={provider.ccn}
+              center={[provider.latitude, provider.longitude]}
+              radius={isTop5 ? 10 : 6}
+              pathOptions={{
+                fillColor: '#f59e0b',
+                fillOpacity: isTop5 ? 1 : 0.9,
+                color: isTop5 ? '#fbbf24' : '#d97706',
+                weight: isTop5 ? 3 : 2,
+                className: isTop5 ? 'pulse-yellow-marker' : '',
+              }}
+              eventHandlers={{
+                click: () => onProviderClick?.(provider.ccn),
+              }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-bold text-amber-600">{provider.provider_name}</p>
+                  <p className="text-gray-600">
+                    {provider.city}, {provider.state}
+                  </p>
+                  <p className="text-gray-500">
+                    Score: {provider.overall_score} | ADC: {provider.estimated_adc || 'N/A'}
+                  </p>
+                  <p className="text-xs text-amber-500 font-medium mt-1">
+                    {isTop5 ? 'TOP 5% ' : ''}YELLOW - Click for details
+                  </p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
 
         {/* GREEN Markers */}
-        {greenProviders.map((provider) => (
-          <CircleMarker
-            key={provider.ccn}
-            center={[provider.latitude, provider.longitude]}
-            radius={8}
-            pathOptions={{
-              fillColor: '#10b981',
-              fillOpacity: 0.9,
-              color: '#059669',
-              weight: 2,
-            }}
-            eventHandlers={{
-              click: () => onProviderClick?.(provider.ccn),
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <p className="font-bold text-emerald-600">{provider.provider_name}</p>
-                <p className="text-gray-600">
-                  {provider.city}, {provider.state}
-                </p>
-                <p className="text-gray-500">
-                  Score: {provider.overall_score} | ADC: {provider.estimated_adc || 'N/A'}
-                </p>
-                <p className="text-xs text-emerald-500 font-medium mt-1">GREEN - Click for details</p>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
+        {greenProviders.map((provider) => {
+          const isTop5 = provider.overall_score >= greenTop5Threshold;
+          return (
+            <CircleMarker
+              key={provider.ccn}
+              center={[provider.latitude, provider.longitude]}
+              radius={isTop5 ? 12 : 8}
+              pathOptions={{
+                fillColor: isTop5 ? '#34d399' : '#10b981',
+                fillOpacity: isTop5 ? 1 : 0.9,
+                color: isTop5 ? '#6ee7b7' : '#059669',
+                weight: isTop5 ? 3 : 2,
+                className: isTop5 ? 'pulse-green-marker' : '',
+              }}
+              eventHandlers={{
+                click: () => onProviderClick?.(provider.ccn),
+              }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-bold text-emerald-600">{provider.provider_name}</p>
+                  <p className="text-gray-600">
+                    {provider.city}, {provider.state}
+                  </p>
+                  <p className="text-gray-500">
+                    Score: {provider.overall_score} | ADC: {provider.estimated_adc || 'N/A'}
+                  </p>
+                  <p className="text-xs text-emerald-500 font-medium mt-1">
+                    {isTop5 ? 'TOP 5% ' : ''}GREEN - Click for details
+                  </p>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
     </div>
   );

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy } from 'lucide-react';
+import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3, Building2, Sliders, Mail, User } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
+import { useAuth } from './AuthProvider';
 import { useState, useRef, useEffect } from 'react';
 
 const hotMarkets = [
@@ -17,25 +18,36 @@ const hotMarkets = [
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/insights', label: 'Insights', icon: BarChart3 },
   { href: '/top-10', label: 'Top 10', icon: Trophy },
-  { href: '/targets', label: 'All Targets', icon: List },
-  { href: '/green', label: 'GREEN', icon: Target },
+  { href: '/targets', label: 'Targets', icon: List },
   { href: '/map', label: 'Map', icon: Map },
   { href: '/search', label: 'Search', icon: Search },
-  { href: '/watchlist', label: 'Watchlist', icon: Star },
+];
+
+const toolsItems = [
+  { href: '/competitors', label: 'Competitors', icon: Building2 },
+  { href: '/scoring', label: 'Custom Scoring', icon: Sliders },
+  { href: '/outreach', label: 'Outreach', icon: Mail },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const [hotMarketsOpen, setHotMarketsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const toolsRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setHotMarketsOpen(false);
+      }
+      if (toolsRef.current && !toolsRef.current.contains(event.target as Node)) {
+        setToolsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -43,6 +55,7 @@ export function Navigation() {
   }, []);
 
   const isHotMarketActive = pathname.startsWith('/market/');
+  const isToolsActive = ['/competitors', '/scoring', '/outreach'].includes(pathname);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-[var(--color-border)]">
@@ -120,8 +133,14 @@ export function Navigation() {
                     className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden"
                   >
                     <div className="p-2">
-                      <div className="px-3 py-2 text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Priority Markets
+                      <div className="px-3 py-2 flex items-center justify-between">
+                        <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                          Priority Markets
+                        </span>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="text-emerald-400">G=GREEN</span>
+                          <span className="text-amber-400">Y=YELLOW</span>
+                        </div>
                       </div>
                       {hotMarkets.map((market) => {
                         const isActive = pathname === `/market/${market.state.toLowerCase()}`;
@@ -167,7 +186,57 @@ export function Navigation() {
               </AnimatePresence>
             </div>
 
-            <div className="ml-4 pl-4 border-l border-[var(--color-border)]">
+            {/* Tools Dropdown */}
+            <div className="relative" ref={toolsRef}>
+              <button
+                onClick={() => setToolsOpen(!toolsOpen)}
+                className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
+                  isToolsActive
+                    ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
+                }`}
+              >
+                <Sliders className="w-4 h-4" />
+                Tools
+                <ChevronDown className={`w-3 h-3 transition-transform ${toolsOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {toolsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full mt-2 right-0 w-48 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden"
+                  >
+                    <div className="p-2">
+                      {toolsItems.map((item) => {
+                        const isActive = pathname === item.href;
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setToolsOpen(false)}
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors ${
+                              isActive
+                                ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
+                                : 'hover:bg-[var(--color-bg-hover)]'
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="font-medium">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="ml-4 pl-4 border-l border-[var(--color-border)] flex items-center gap-2">
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-all duration-200 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
@@ -179,6 +248,24 @@ export function Navigation() {
                   <Sun className="w-5 h-5" />
                 )}
               </button>
+
+              <Link
+                href="/account"
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  pathname === '/account'
+                    ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-400)]'
+                    : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
+                title={user ? user.email : 'Sign In'}
+              >
+                {user ? (
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center text-white text-xs font-bold">
+                    {user.name?.[0] || user.email[0].toUpperCase()}
+                  </div>
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </Link>
             </div>
           </div>
         </div>

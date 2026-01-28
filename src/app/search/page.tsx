@@ -147,6 +147,11 @@ export default function SearchPage() {
     ([_, v]) => v !== undefined && v !== '' && v !== false
   ).length;
 
+  // Auto-search on initial load
+  useEffect(() => {
+    search();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const search = useCallback(async () => {
     setLoading(true);
     setHasSearched(true);
@@ -255,7 +260,13 @@ export default function SearchPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filters Sidebar */}
-        <div className="lg:col-span-1 space-y-4">
+        <form
+          className="lg:col-span-1 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            search();
+          }}
+        >
           {/* Quick Actions */}
           <div className="glass-card rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
@@ -264,6 +275,7 @@ export default function SearchPage() {
               </span>
               {activeFilterCount > 0 && (
                 <button
+                  type="button"
                   onClick={clearFilters}
                   className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
                 >
@@ -273,7 +285,7 @@ export default function SearchPage() {
               )}
             </div>
             <button
-              onClick={search}
+              type="submit"
               disabled={loading}
               className="w-full py-2.5 rounded-lg bg-gradient-to-r from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -719,7 +731,7 @@ export default function SearchPage() {
               </div>
             )}
           </div>
-        </div>
+        </form>
 
         {/* Results */}
         <div className="lg:col-span-3">

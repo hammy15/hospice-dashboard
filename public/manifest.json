@@ -1,0 +1,42 @@
+{
+  "name": "Hospice Tracker",
+  "short_name": "HospiceTracker",
+  "description": "Real-time hospice acquisition intelligence. Track targets, analyze markets, and close deals faster.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1a",
+  "theme_color": "#14b8a6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "healthcare"],
+  "shortcuts": [
+    {
+      "name": "View Targets",
+      "url": "/targets",
+      "description": "View all acquisition targets"
+    },
+    {
+      "name": "Search",
+      "url": "/search",
+      "description": "Search providers"
+    },
+    {
+      "name": "Map View",
+      "url": "/map",
+      "description": "View targets on map"
+    }
+  ]
+}

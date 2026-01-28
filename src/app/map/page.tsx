@@ -99,8 +99,16 @@ export default function MapPage() {
             <span className="text-[var(--color-text-secondary)]">GREEN Target</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-emerald-400 border-2 border-emerald-300 animate-pulse shadow-lg shadow-emerald-500/50"></div>
+            <span className="text-[var(--color-text-secondary)]">Top 5% GREEN</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-amber-500 border-2 border-amber-600"></div>
             <span className="text-[var(--color-text-secondary)]">YELLOW Target</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-amber-400 border-2 border-amber-300 animate-pulse shadow-lg shadow-amber-500/50"></div>
+            <span className="text-[var(--color-text-secondary)]">Top 5% YELLOW</span>
           </div>
           {showHeatmap && (
             <div className="flex items-center gap-2">
