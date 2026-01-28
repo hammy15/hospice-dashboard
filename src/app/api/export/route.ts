@@ -1,50 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
+// All available export fields with metadata
+const AVAILABLE_FIELDS: Record<string, { label: string; category: string; column: string }> = {
+  // Basic Info
+  ccn: { label: 'CCN', category: 'Basic Info', column: 'ccn' },
+  provider_name: { label: 'Provider Name', category: 'Basic Info', column: 'provider_name' },
+  state: { label: 'State', category: 'Basic Info', column: 'state' },
+  city: { label: 'City', category: 'Basic Info', column: 'city' },
+  county: { label: 'County', category: 'Basic Info', column: 'county' },
+  address: { label: 'Address', category: 'Basic Info', column: 'address_line_1' },
+  zip_code: { label: 'ZIP Code', category: 'Basic Info', column: 'zip_code' },
+  phone_number: { label: 'Phone', category: 'Basic Info', column: 'phone_number' },
+  website: { label: 'Website', category: 'Basic Info', column: 'website' },
+
+  // Classification & Scores
+  classification: { label: 'Classification', category: 'Scores', column: 'classification' },
+  overall_score: { label: 'Overall Score', category: 'Scores', column: 'overall_score' },
+  quality_score: { label: 'Quality Score', category: 'Scores', column: 'quality_score' },
+  compliance_score: { label: 'Compliance Score', category: 'Scores', column: 'compliance_score' },
+  operational_score: { label: 'Operational Score', category: 'Scores', column: 'operational_score' },
+  market_score: { label: 'Market Score', category: 'Scores', column: 'market_score' },
+  confidence_level: { label: 'Confidence Level', category: 'Scores', column: 'confidence_level' },
+
+  // Operations
+  estimated_adc: { label: 'Estimated ADC', category: 'Operations', column: 'estimated_adc' },
+  adc_fit: { label: 'ADC Fit', category: 'Operations', column: 'adc_fit' },
+  cms_quality_star: { label: 'CMS Quality Star', category: 'Operations', column: 'cms_quality_star' },
+  cms_cahps_star: { label: 'CAHPS Star', category: 'Operations', column: 'cms_cahps_star' },
+  competitive_density: { label: 'Competitive Density', category: 'Operations', column: 'competitive_density' },
+  outreach_readiness: { label: 'Outreach Readiness', category: 'Operations', column: 'outreach_readiness' },
+  platform_vs_tuckin: { label: 'Deal Type', category: 'Operations', column: 'platform_vs_tuckin' },
+
+  // Financials
+  total_revenue: { label: 'Total Revenue', category: 'Financials', column: 'total_revenue' },
+  total_expenses: { label: 'Total Expenses', category: 'Financials', column: 'total_expenses' },
+  net_income: { label: 'Net Income', category: 'Financials', column: 'net_income' },
+
+  // Ownership
+  ownership_type_cms: { label: 'Ownership Type', category: 'Ownership', column: 'ownership_type_cms' },
+  pe_backed: { label: 'PE Backed', category: 'Ownership', column: 'pe_backed' },
+  chain_affiliated: { label: 'Chain Affiliated', category: 'Ownership', column: 'chain_affiliated' },
+  owner_count: { label: 'Owner Count', category: 'Ownership', column: 'owner_count' },
+  ownership_complexity: { label: 'Ownership Complexity', category: 'Ownership', column: 'ownership_complexity' },
+
+  // Market Demographics
+  con_state: { label: 'CON State', category: 'Market', column: 'con_state' },
+  county_pop_65_plus: { label: 'County Pop 65+', category: 'Market', column: 'county_pop_65_plus' },
+  county_pct_65_plus: { label: '% Pop 65+', category: 'Market', column: 'county_pct_65_plus' },
+  county_median_income: { label: 'Median Income', category: 'Market', column: 'county_median_income' },
+
+  // Contact
+  administrator_name: { label: 'Administrator', category: 'Contact', column: 'administrator_name' },
+};
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
+  // If requesting field list, return available fields grouped by category
+  if (searchParams.get('fields') === 'list') {
+    const fieldsByCategory: Record<string, { key: string; label: string }[]> = {};
+
+    Object.entries(AVAILABLE_FIELDS).forEach(([key, { label, category }]) => {
+      if (!fieldsByCategory[category]) {
+        fieldsByCategory[category] = [];
+      }
+      fieldsByCategory[category].push({ key, label });
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: fieldsByCategory,
+    });
+  }
+
+  // Get selected fields (or use defaults)
+  const selectedParam = searchParams.get('selected');
+  const selectedFields = selectedParam
+    ? selectedParam.split(',').filter(f => f in AVAILABLE_FIELDS)
+    : ['ccn', 'provider_name', 'city', 'state', 'classification', 'overall_score', 'estimated_adc', 'phone_number'];
+
+  if (selectedFields.length === 0) {
+    return NextResponse.json({ success: false, error: 'No valid fields selected' }, { status: 400 });
+  }
+
+  // Build SELECT columns
+  const columns = selectedFields.map(f => {
+    const field = AVAILABLE_FIELDS[f];
+    return field.column === f ? field.column : `${field.column} as ${f}`;
+  }).join(', ');
+
+  // Get filters
   const classification = searchParams.get('classification');
   const state = searchParams.get('state');
   const conStateOnly = searchParams.get('conStateOnly') === 'true';
   const minAdc = searchParams.get('minAdc');
   const maxAdc = searchParams.get('maxAdc');
+  const peOnly = searchParams.get('peOnly') === 'true';
+  const independentOnly = searchParams.get('independentOnly') === 'true';
   const search = searchParams.get('search');
   const format = searchParams.get('format') || 'csv';
 
   // Build dynamic query based on filters
-  let query = `
-    SELECT
-      ccn,
-      provider_name,
-      city,
-      state,
-      county,
-      classification,
-      overall_score,
-      quality_score,
-      compliance_score,
-      operational_score,
-      market_score,
-      estimated_adc,
-      adc_fit,
-      ownership_type_cms,
-      con_state,
-      pe_backed,
-      chain_affiliated,
-      ownership_complexity,
-      outreach_readiness,
-      platform_vs_tuckin,
-      confidence_level,
-      phone_number,
-      website,
-      address_line_1,
-      city || ', ' || state || ' ' || COALESCE(zip_code, '') as full_address
-    FROM hospice_providers
-    WHERE 1=1
-  `;
+  let query = `SELECT ${columns} FROM hospice_providers WHERE 1=1`;
 
-  const params: any[] = [];
+  const params: (string | number | boolean)[] = [];
   let paramIndex = 1;
 
   if (classification) {
@@ -75,8 +135,16 @@ export async function GET(request: NextRequest) {
     paramIndex++;
   }
 
+  if (peOnly) {
+    query += ` AND pe_backed = true`;
+  }
+
+  if (independentOnly) {
+    query += ` AND pe_backed = false AND chain_affiliated = false`;
+  }
+
   if (search) {
-    query += ` AND (provider_name ILIKE $${paramIndex} OR city ILIKE $${paramIndex} OR ownership_type_cms ILIKE $${paramIndex})`;
+    query += ` AND (provider_name ILIKE $${paramIndex} OR city ILIKE $${paramIndex})`;
     params.push(`%${search}%`);
     paramIndex++;
   }
@@ -86,82 +154,42 @@ export async function GET(request: NextRequest) {
   try {
     const results = await sql.query(query, params);
 
-    if (format === 'csv') {
-      // Generate CSV
-      const headers = [
-        'CCN',
-        'Provider Name',
-        'City',
-        'State',
-        'County',
-        'Classification',
-        'Overall Score',
-        'Quality Score',
-        'Compliance Score',
-        'Operational Score',
-        'Market Score',
-        'Estimated ADC',
-        'ADC Fit',
-        'Ownership Type',
-        'CON State',
-        'PE Backed',
-        'Chain Affiliated',
-        'Ownership Complexity',
-        'Outreach Readiness',
-        'Deal Type',
-        'Confidence Level',
-        'Phone',
-        'Website',
-        'Address'
-      ];
-
-      const csvRows = [headers.join(',')];
-
-      for (const row of results) {
-        const values = [
-          row.ccn,
-          `"${(row.provider_name || '').replace(/"/g, '""')}"`,
-          `"${(row.city || '').replace(/"/g, '""')}"`,
-          row.state,
-          `"${(row.county || '').replace(/"/g, '""')}"`,
-          row.classification,
-          row.overall_score,
-          row.quality_score,
-          row.compliance_score,
-          row.operational_score,
-          row.market_score,
-          row.estimated_adc,
-          row.adc_fit,
-          `"${(row.ownership_type_cms || '').replace(/"/g, '""')}"`,
-          row.con_state ? 'Yes' : 'No',
-          row.pe_backed ? 'Yes' : 'No',
-          row.chain_affiliated ? 'Yes' : 'No',
-          row.ownership_complexity,
-          row.outreach_readiness,
-          row.platform_vs_tuckin,
-          row.confidence_level,
-          row.phone_number || '',
-          row.website || '',
-          `"${(row.full_address || '').replace(/"/g, '""')}"`
-        ];
-        csvRows.push(values.join(','));
-      }
-
-      const csv = csvRows.join('\n');
-
-      return new NextResponse(csv, {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="hospice-targets-${new Date().toISOString().split('T')[0]}.csv"`,
-        },
+    if (format === 'json') {
+      return NextResponse.json({
+        success: true,
+        count: results.length,
+        data: results,
       });
     }
 
-    // Return JSON if format is not CSV
-    return NextResponse.json({ data: results, count: results.length });
+    // Generate CSV
+    const headers = selectedFields.map(f => AVAILABLE_FIELDS[f].label);
+    const csvRows = [headers.join(',')];
+
+    for (const row of results) {
+      const values = selectedFields.map(field => {
+        const value = row[field];
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return String(value);
+      });
+      csvRows.push(values.join(','));
+    }
+
+    const csv = csvRows.join('\n');
+
+    return new NextResponse(csv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename="hospice-export-${new Date().toISOString().split('T')[0]}.csv"`,
+      },
+    });
   } catch (error) {
     console.error('Export error:', error);
-    return NextResponse.json({ error: 'Export failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Export failed' }, { status: 500 });
   }
 }

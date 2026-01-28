@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3, Building2, Sliders, Mail, User } from 'lucide-react';
+import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3, Building2, Sliders, Mail, User, Briefcase, Users, Calculator, GitCompare, PieChart, Download, Shield, FileText } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from './AuthProvider';
 import { useState, useRef, useEffect } from 'react';
@@ -26,7 +26,15 @@ const navItems = [
 ];
 
 const toolsItems = [
+  { href: '/deals', label: 'Deal Pipeline', icon: Briefcase },
+  { href: '/contacts', label: 'Contacts CRM', icon: Users },
   { href: '/owner-carryback', label: 'Owner Carry-Back', icon: Star },
+  { href: '/valuation', label: 'Valuation', icon: Calculator },
+  { href: '/compare', label: 'Compare', icon: GitCompare },
+  { href: '/consolidation', label: 'Consolidation', icon: PieChart },
+  { href: '/compliance', label: 'Compliance', icon: Shield },
+  { href: '/export', label: 'Export', icon: Download },
+  { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/competitors', label: 'Competitors', icon: Building2 },
   { href: '/scoring', label: 'Custom Scoring', icon: Sliders },
   { href: '/outreach', label: 'Outreach', icon: Mail },
@@ -56,7 +64,7 @@ export function Navigation() {
   }, []);
 
   const isHotMarketActive = pathname.startsWith('/market/');
-  const isToolsActive = ['/owner-carryback', '/competitors', '/scoring', '/outreach'].includes(pathname);
+  const isToolsActive = ['/deals', '/contacts', '/owner-carryback', '/valuation', '/compare', '/consolidation', '/compliance', '/export', '/reports', '/competitors', '/scoring', '/outreach'].includes(pathname);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-[var(--color-border)]">
@@ -209,7 +217,7 @@ export function Navigation() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 right-0 w-48 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden"
+                    className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden max-h-[70vh] overflow-y-auto"
                   >
                     <div className="p-2">
                       {toolsItems.map((item) => {

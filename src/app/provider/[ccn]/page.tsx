@@ -1,4 +1,4 @@
-import { getProvider, getRelatedProviders, calculateOwnerCarryBackScore } from '@/lib/db';
+import { getProvider, getRelatedProviders, calculateOwnerCarryBackScore, getSimilarProviders, getDataQualityScore } from '@/lib/db';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 import { WatchlistButton } from '@/components/WatchlistButton';
 import { notFound } from 'next/navigation';
@@ -48,6 +48,8 @@ export default async function ProviderDetailPage({ params }: Props) {
   }
 
   const relatedProviders = await getRelatedProviders(ccn, provider.state, provider.city);
+  const similarProviders = await getSimilarProviders(ccn, 5);
+  const dataQuality = await getDataQualityScore(ccn);
 
   const formatScore = (score: number | string | null) => {
     if (score === null || score === undefined) return '—';
@@ -756,9 +758,29 @@ export default async function ProviderDetailPage({ params }: Props) {
       {/* Data Quality */}
       <div className="glass-card rounded-2xl p-6 mb-6">
         <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4">
-          Data Quality & Follow-up
+          Data Quality & Completeness
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-sm text-[var(--color-text-muted)] mb-1">Completeness Score</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2 rounded-full bg-[var(--color-bg-tertiary)]">
+                <div
+                  className={`h-2 rounded-full ${
+                    (dataQuality?.completeness_score || 0) >= 80 ? 'bg-emerald-500' :
+                    (dataQuality?.completeness_score || 0) >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${dataQuality?.completeness_score || 0}%` }}
+                />
+              </div>
+              <span className={`font-bold ${
+                (dataQuality?.completeness_score || 0) >= 80 ? 'text-emerald-400' :
+                (dataQuality?.completeness_score || 0) >= 50 ? 'text-amber-400' : 'text-red-400'
+              }`}>
+                {dataQuality?.completeness_score || 0}%
+              </span>
+            </div>
+          </div>
           <div>
             <p className="text-sm text-[var(--color-text-muted)] mb-1">Data Quality</p>
             <p className={`font-medium ${
@@ -773,11 +795,91 @@ export default async function ProviderDetailPage({ params }: Props) {
             <p className="font-medium">{provider.confidence_level || '—'} ({formatNumber(provider.confidence_score, 2)})</p>
           </div>
           <div>
-            <p className="text-sm text-[var(--color-text-muted)] mb-1">Missing Data</p>
-            <p className="text-[var(--color-text-secondary)] text-sm">{provider.missing_data || 'Complete'}</p>
+            <p className="text-sm text-[var(--color-text-muted)] mb-1">Missing Fields</p>
+            <div className="flex flex-wrap gap-1">
+              {dataQuality?.missing_fields?.length > 0 ? (
+                dataQuality.missing_fields.map((field: string) => (
+                  <span key={field} className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs">
+                    {field}
+                  </span>
+                ))
+              ) : (
+                <span className="text-emerald-400 text-sm">Complete</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Similar Providers */}
+      {similarProviders && similarProviders.length > 0 && (
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] flex items-center gap-2">
+              <Target className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+              Similar Providers
+            </h2>
+            <Link
+              href="/compare"
+              className="text-sm text-[var(--color-turquoise-400)] hover:underline"
+            >
+              Compare →
+            </Link>
+          </div>
+          <p className="text-sm text-[var(--color-text-muted)] mb-4">
+            Providers with similar ADC, score, and classification
+          </p>
+          <div className="space-y-2">
+            {(similarProviders as any[]).map((similar) => (
+              <Link
+                key={similar.ccn}
+                href={`/provider/${similar.ccn}`}
+                className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    similar.classification === 'GREEN' ? 'bg-emerald-400' : 'bg-amber-400'
+                  }`} />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate group-hover:text-[var(--color-turquoise-400)] transition-colors">
+                      {similar.provider_name}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {similar.city}, {similar.state}
+                      {similar.state === provider.state && (
+                        <span className="ml-2 text-[var(--color-turquoise-400)]">Same State</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{Number(similar.overall_score).toFixed(1)}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Score</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">{similar.estimated_adc || '—'}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">ADC</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono">
+                      {similar.pe_backed ? (
+                        <span className="text-purple-400">PE</span>
+                      ) : similar.chain_affiliated ? (
+                        <span className="text-amber-400">Chain</span>
+                      ) : (
+                        <span className="text-emerald-400">Indep</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Type</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-[var(--color-turquoise-400)] transition-colors" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Related Providers */}
       {relatedProviders.length > 0 && (

@@ -705,3 +705,442 @@ export async function getTopOwnerCarryBackOpportunities(limit = 25) {
     LIMIT ${limit}
   `;
 }
+
+// ============================================
+// DEAL PIPELINE MANAGEMENT
+// ============================================
+
+export interface Deal {
+  id: number;
+  ccn: string;
+  deal_name: string;
+  stage: string;
+  status: string;
+  priority: string;
+  assigned_to: string | null;
+  deal_value: number | null;
+  purchase_price: number | null;
+  revenue_multiple: number | null;
+  ebitda_multiple: number | null;
+  seller_note_amount: number | null;
+  seller_note_rate: number | null;
+  seller_note_term_months: number | null;
+  earnout_amount: number | null;
+  earnout_terms: string | null;
+  expected_close_date: string | null;
+  actual_close_date: string | null;
+  loss_reason: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getDeals(filters?: { stage?: string; status?: string; assignedTo?: string }) {
+  if (filters?.stage) {
+    return await sql`
+      SELECT d.*, p.provider_name, p.state, p.city, p.classification, p.estimated_adc, p.overall_score, p.total_revenue
+      FROM deals d
+      LEFT JOIN hospice_providers p ON d.ccn = p.ccn
+      WHERE d.stage = ${filters.stage}
+      ORDER BY d.updated_at DESC
+    `;
+  }
+  if (filters?.status) {
+    return await sql`
+      SELECT d.*, p.provider_name, p.state, p.city, p.classification, p.estimated_adc, p.overall_score, p.total_revenue
+      FROM deals d
+      LEFT JOIN hospice_providers p ON d.ccn = p.ccn
+      WHERE d.status = ${filters.status}
+      ORDER BY d.updated_at DESC
+    `;
+  }
+  return await sql`
+    SELECT d.*, p.provider_name, p.state, p.city, p.classification, p.estimated_adc, p.overall_score, p.total_revenue
+    FROM deals d
+    LEFT JOIN hospice_providers p ON d.ccn = p.ccn
+    ORDER BY d.updated_at DESC
+  `;
+}
+
+export async function getDealById(id: number) {
+  const result = await sql`
+    SELECT d.*, p.provider_name, p.state, p.city, p.county, p.classification, p.estimated_adc,
+           p.overall_score, p.total_revenue, p.total_expenses, p.net_income, p.pe_backed,
+           p.chain_affiliated, p.owner_count, p.ownership_type_cms, p.phone_number, p.administrator_name
+    FROM deals d
+    LEFT JOIN hospice_providers p ON d.ccn = p.ccn
+    WHERE d.id = ${id}
+  `;
+  return result[0];
+}
+
+export async function createDeal(deal: Partial<Deal>) {
+  const result = await sql`
+    INSERT INTO deals (ccn, deal_name, stage, status, priority, assigned_to, deal_value,
+                      purchase_price, revenue_multiple, ebitda_multiple, seller_note_amount,
+                      seller_note_rate, seller_note_term_months, earnout_amount, earnout_terms,
+                      expected_close_date, notes)
+    VALUES (${deal.ccn}, ${deal.deal_name}, ${deal.stage || 'prospect'}, ${deal.status || 'active'},
+            ${deal.priority || 'medium'}, ${deal.assigned_to}, ${deal.deal_value},
+            ${deal.purchase_price}, ${deal.revenue_multiple}, ${deal.ebitda_multiple},
+            ${deal.seller_note_amount}, ${deal.seller_note_rate}, ${deal.seller_note_term_months},
+            ${deal.earnout_amount}, ${deal.earnout_terms}, ${deal.expected_close_date}, ${deal.notes})
+    RETURNING *
+  `;
+  return result[0];
+}
+
+export async function updateDeal(id: number, updates: Partial<Deal>) {
+  const result = await sql`
+    UPDATE deals SET
+      deal_name = COALESCE(${updates.deal_name}, deal_name),
+      stage = COALESCE(${updates.stage}, stage),
+      status = COALESCE(${updates.status}, status),
+      priority = COALESCE(${updates.priority}, priority),
+      assigned_to = COALESCE(${updates.assigned_to}, assigned_to),
+      deal_value = COALESCE(${updates.deal_value}, deal_value),
+      purchase_price = COALESCE(${updates.purchase_price}, purchase_price),
+      revenue_multiple = COALESCE(${updates.revenue_multiple}, revenue_multiple),
+      ebitda_multiple = COALESCE(${updates.ebitda_multiple}, ebitda_multiple),
+      seller_note_amount = COALESCE(${updates.seller_note_amount}, seller_note_amount),
+      seller_note_rate = COALESCE(${updates.seller_note_rate}, seller_note_rate),
+      seller_note_term_months = COALESCE(${updates.seller_note_term_months}, seller_note_term_months),
+      earnout_amount = COALESCE(${updates.earnout_amount}, earnout_amount),
+      earnout_terms = COALESCE(${updates.earnout_terms}, earnout_terms),
+      expected_close_date = COALESCE(${updates.expected_close_date}, expected_close_date),
+      actual_close_date = COALESCE(${updates.actual_close_date}, actual_close_date),
+      loss_reason = COALESCE(${updates.loss_reason}, loss_reason),
+      notes = COALESCE(${updates.notes}, notes),
+      updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result[0];
+}
+
+export async function deleteDeal(id: number) {
+  await sql`DELETE FROM deals WHERE id = ${id}`;
+}
+
+export async function getDealPipelineSummary() {
+  return await sql`
+    SELECT
+      stage,
+      COUNT(*) as count,
+      SUM(deal_value) as total_value,
+      AVG(deal_value) as avg_value
+    FROM deals
+    WHERE status = 'active'
+    GROUP BY stage
+    ORDER BY
+      CASE stage
+        WHEN 'prospect' THEN 1
+        WHEN 'outreach' THEN 2
+        WHEN 'meeting' THEN 3
+        WHEN 'loi' THEN 4
+        WHEN 'due_diligence' THEN 5
+        WHEN 'negotiation' THEN 6
+        WHEN 'closing' THEN 7
+        ELSE 8
+      END
+  `;
+}
+
+// ============================================
+// CONTACT CRM
+// ============================================
+
+export interface Contact {
+  id: number;
+  ccn: string;
+  contact_name: string;
+  title: string | null;
+  email: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
+  contact_type: string;
+  is_decision_maker: boolean;
+  is_primary: boolean;
+  notes: string | null;
+  last_contact_date: string | null;
+  next_follow_up: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getContacts(ccn?: string) {
+  if (ccn) {
+    return await sql`
+      SELECT c.*, p.provider_name, p.state, p.city
+      FROM contacts c
+      LEFT JOIN hospice_providers p ON c.ccn = p.ccn
+      WHERE c.ccn = ${ccn}
+      ORDER BY c.is_primary DESC, c.is_decision_maker DESC, c.contact_name
+    `;
+  }
+  return await sql`
+    SELECT c.*, p.provider_name, p.state, p.city
+    FROM contacts c
+    LEFT JOIN hospice_providers p ON c.ccn = p.ccn
+    ORDER BY c.next_follow_up ASC NULLS LAST, c.updated_at DESC
+    LIMIT 100
+  `;
+}
+
+export async function getContactsWithFollowUps() {
+  return await sql`
+    SELECT c.*, p.provider_name, p.state, p.city, p.classification
+    FROM contacts c
+    LEFT JOIN hospice_providers p ON c.ccn = p.ccn
+    WHERE c.next_follow_up IS NOT NULL AND c.next_follow_up <= CURRENT_DATE + INTERVAL '7 days'
+    ORDER BY c.next_follow_up ASC
+  `;
+}
+
+export async function createContact(contact: Partial<Contact>) {
+  const result = await sql`
+    INSERT INTO contacts (ccn, contact_name, title, email, phone, linkedin_url, contact_type,
+                         is_decision_maker, is_primary, notes, next_follow_up)
+    VALUES (${contact.ccn}, ${contact.contact_name}, ${contact.title}, ${contact.email},
+            ${contact.phone}, ${contact.linkedin_url}, ${contact.contact_type || 'general'},
+            ${contact.is_decision_maker || false}, ${contact.is_primary || false},
+            ${contact.notes}, ${contact.next_follow_up})
+    RETURNING *
+  `;
+  return result[0];
+}
+
+export async function updateContact(id: number, updates: Partial<Contact>) {
+  const result = await sql`
+    UPDATE contacts SET
+      contact_name = COALESCE(${updates.contact_name}, contact_name),
+      title = COALESCE(${updates.title}, title),
+      email = COALESCE(${updates.email}, email),
+      phone = COALESCE(${updates.phone}, phone),
+      linkedin_url = COALESCE(${updates.linkedin_url}, linkedin_url),
+      contact_type = COALESCE(${updates.contact_type}, contact_type),
+      is_decision_maker = COALESCE(${updates.is_decision_maker}, is_decision_maker),
+      is_primary = COALESCE(${updates.is_primary}, is_primary),
+      notes = COALESCE(${updates.notes}, notes),
+      last_contact_date = COALESCE(${updates.last_contact_date}, last_contact_date),
+      next_follow_up = COALESCE(${updates.next_follow_up}, next_follow_up),
+      updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result[0];
+}
+
+export async function deleteContact(id: number) {
+  await sql`DELETE FROM contacts WHERE id = ${id}`;
+}
+
+// ============================================
+// OUTREACH HISTORY
+// ============================================
+
+export async function logOutreach(data: {
+  contact_id?: number;
+  ccn: string;
+  outreach_type: string;
+  subject?: string;
+  notes?: string;
+  outcome?: string;
+  follow_up_required?: boolean;
+  follow_up_date?: string;
+  created_by?: string;
+}) {
+  const result = await sql`
+    INSERT INTO outreach_history (contact_id, ccn, outreach_type, subject, notes, outcome,
+                                  follow_up_required, follow_up_date, created_by)
+    VALUES (${data.contact_id}, ${data.ccn}, ${data.outreach_type}, ${data.subject},
+            ${data.notes}, ${data.outcome}, ${data.follow_up_required || false},
+            ${data.follow_up_date}, ${data.created_by})
+    RETURNING *
+  `;
+
+  if (data.contact_id) {
+    await sql`UPDATE contacts SET last_contact_date = CURRENT_DATE, updated_at = NOW() WHERE id = ${data.contact_id}`;
+  }
+
+  return result[0];
+}
+
+export async function getOutreachHistory(ccn: string) {
+  return await sql`
+    SELECT oh.*, c.contact_name
+    FROM outreach_history oh
+    LEFT JOIN contacts c ON oh.contact_id = c.id
+    WHERE oh.ccn = ${ccn}
+    ORDER BY oh.sent_at DESC, oh.created_at DESC
+  `;
+}
+
+// ============================================
+// VALUATION CALCULATOR
+// ============================================
+
+export async function getProviderFinancials(ccn: string) {
+  const result = await sql`
+    SELECT
+      ccn, provider_name, state, city, estimated_adc,
+      total_revenue, total_expenses, net_income, cost_report_year,
+      total_patient_days, cost_per_day,
+      nonprofit_revenue, nonprofit_assets, exec_compensation, nonprofit_tax_year,
+      ownership_type_cms, pe_backed, chain_affiliated
+    FROM hospice_providers
+    WHERE ccn = ${ccn}
+  `;
+  return result[0];
+}
+
+export async function getComparableTransactions(state?: string, adcMin?: number, adcMax?: number) {
+  return await sql`
+    SELECT * FROM ma_transactions
+    WHERE (${state}::text IS NULL OR state = ${state})
+      AND (${adcMin}::numeric IS NULL OR estimated_adc >= ${adcMin})
+      AND (${adcMax}::numeric IS NULL OR estimated_adc <= ${adcMax})
+    ORDER BY transaction_date DESC
+    LIMIT 20
+  `;
+}
+
+export async function getIndustryMultiples() {
+  return {
+    revenue_multiple: { low: 0.8, median: 1.0, high: 1.3 },
+    ebitda_multiple: { low: 5.0, median: 7.0, high: 10.0 },
+    per_adc_value: { low: 75000, median: 100000, high: 150000 },
+    notes: 'Based on hospice M&A transactions 2022-2024'
+  };
+}
+
+// ============================================
+// PROVIDER COMPARISON
+// ============================================
+
+export async function getProvidersForComparison(ccns: string[]) {
+  return await sql`
+    SELECT
+      ccn, provider_name, state, city, county, classification,
+      overall_score, quality_score, compliance_score, operational_score, market_score,
+      estimated_adc, total_revenue, total_expenses, net_income,
+      pe_backed, chain_affiliated, owner_count, ownership_type_cms,
+      con_state, county_pop_65_plus, county_pct_65_plus, county_median_income,
+      cms_quality_star, cms_cahps_star, competitive_density,
+      phone_number, administrator_name
+    FROM hospice_providers
+    WHERE ccn = ANY(${ccns})
+  `;
+}
+
+// ============================================
+// SIMILAR PROVIDERS
+// ============================================
+
+export async function getSimilarProviders(ccn: string, limit = 5) {
+  const ref = await sql`SELECT state, estimated_adc, overall_score, classification FROM hospice_providers WHERE ccn = ${ccn}`;
+  if (!ref[0]) return [];
+
+  const { state, estimated_adc, overall_score, classification } = ref[0];
+
+  return await sql`
+    SELECT ccn, provider_name, state, city, classification, overall_score, estimated_adc,
+           pe_backed, chain_affiliated, total_revenue
+    FROM hospice_providers
+    WHERE ccn != ${ccn}
+      AND (
+        state = ${state}
+        OR (estimated_adc BETWEEN ${(estimated_adc || 20) * 0.7} AND ${(estimated_adc || 20) * 1.3})
+      )
+      AND classification = ${classification}
+    ORDER BY
+      ABS(COALESCE(estimated_adc, 20) - ${estimated_adc || 20}) +
+      ABS(COALESCE(overall_score, 50) - ${overall_score || 50}) * 0.5
+    LIMIT ${limit}
+  `;
+}
+
+// ============================================
+// DATA QUALITY METRICS
+// ============================================
+
+export async function getDataQualityScore(ccn: string) {
+  const result = await sql`
+    SELECT
+      ccn,
+      (
+        CASE WHEN phone_number IS NOT NULL THEN 10 ELSE 0 END +
+        CASE WHEN administrator_name IS NOT NULL THEN 10 ELSE 0 END +
+        CASE WHEN total_revenue IS NOT NULL THEN 15 ELSE 0 END +
+        CASE WHEN estimated_adc IS NOT NULL THEN 15 ELSE 0 END +
+        CASE WHEN latitude IS NOT NULL THEN 5 ELSE 0 END +
+        CASE WHEN cms_quality_star IS NOT NULL THEN 10 ELSE 0 END +
+        CASE WHEN county_pop_65_plus IS NOT NULL THEN 10 ELSE 0 END +
+        CASE WHEN npi IS NOT NULL THEN 5 ELSE 0 END +
+        CASE WHEN ownership_type_cms IS NOT NULL THEN 10 ELSE 0 END +
+        CASE WHEN classification_reasons IS NOT NULL AND classification_reasons != '' THEN 10 ELSE 0 END
+      ) as completeness_score,
+      ARRAY_REMOVE(ARRAY[
+        CASE WHEN phone_number IS NULL THEN 'phone' END,
+        CASE WHEN administrator_name IS NULL THEN 'administrator' END,
+        CASE WHEN total_revenue IS NULL THEN 'financials' END,
+        CASE WHEN estimated_adc IS NULL THEN 'ADC' END,
+        CASE WHEN cms_quality_star IS NULL THEN 'quality_stars' END,
+        CASE WHEN county_pop_65_plus IS NULL THEN 'demographics' END
+      ], NULL) as missing_fields
+    FROM hospice_providers
+    WHERE ccn = ${ccn}
+  `;
+  return result[0];
+}
+
+// ============================================
+// MARKET CONSOLIDATION
+// ============================================
+
+export async function getMarketConsolidation() {
+  return await sql`
+    SELECT
+      state,
+      COUNT(*) as total_providers,
+      COUNT(*) FILTER (WHERE pe_backed = true) as pe_owned,
+      COUNT(*) FILTER (WHERE chain_affiliated = true) as chain_affiliated,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false) as independent,
+      ROUND(COUNT(*) FILTER (WHERE pe_backed = true)::numeric / COUNT(*)::numeric * 100, 1) as pe_penetration_pct,
+      ROUND(COUNT(*) FILTER (WHERE chain_affiliated = true)::numeric / COUNT(*)::numeric * 100, 1) as chain_penetration_pct
+    FROM hospice_providers
+    GROUP BY state
+    ORDER BY pe_penetration_pct DESC
+  `;
+}
+
+export async function getPEPortfolios() {
+  return await sql`
+    SELECT
+      CASE
+        WHEN provider_name ILIKE '%amedisys%' THEN 'Amedisys'
+        WHEN provider_name ILIKE '%vitas%' THEN 'VITAS (Chemed)'
+        WHEN provider_name ILIKE '%kindred%' OR provider_name ILIKE '%gentiva%' THEN 'Humana (Kindred)'
+        WHEN provider_name ILIKE '%compassus%' THEN 'Compassus'
+        WHEN provider_name ILIKE '%seasons%' THEN 'Seasons Hospice'
+        WHEN provider_name ILIKE '%enhabit%' THEN 'Enhabit'
+        ELSE 'Other/Independent'
+      END as portfolio_group,
+      COUNT(*) as provider_count,
+      SUM(estimated_adc) as total_adc,
+      ARRAY_AGG(DISTINCT state) as states
+    FROM hospice_providers
+    WHERE pe_backed = true OR chain_affiliated = true
+    GROUP BY
+      CASE
+        WHEN provider_name ILIKE '%amedisys%' THEN 'Amedisys'
+        WHEN provider_name ILIKE '%vitas%' THEN 'VITAS (Chemed)'
+        WHEN provider_name ILIKE '%kindred%' OR provider_name ILIKE '%gentiva%' THEN 'Humana (Kindred)'
+        WHEN provider_name ILIKE '%compassus%' THEN 'Compassus'
+        WHEN provider_name ILIKE '%seasons%' THEN 'Seasons Hospice'
+        WHEN provider_name ILIKE '%enhabit%' THEN 'Enhabit'
+        ELSE 'Other/Independent'
+      END
+    ORDER BY provider_count DESC
+  `;
+}
