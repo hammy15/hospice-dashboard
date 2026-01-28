@@ -24,6 +24,9 @@ import {
   ExternalLink,
   Copy,
   Flame,
+  DollarSign,
+  BadgeCheck,
+  Heart,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -326,6 +329,139 @@ export default async function ProviderDetailPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Financial Data Section */}
+      {(provider.total_revenue || provider.npi || provider.ein) && (
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] mb-4 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+            Financial & Registry Data
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* CMS Cost Report Data */}
+            {provider.total_revenue && (
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-medium text-[var(--color-text-muted)]">
+                    Cost Report ({provider.cost_report_year})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-[var(--color-text-muted)]">Revenue</span>
+                    <span className="font-mono font-semibold text-emerald-400">
+                      ${(Number(provider.total_revenue) / 1000000).toFixed(1)}M
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-[var(--color-text-muted)]">Expenses</span>
+                    <span className="font-mono">
+                      ${(Number(provider.total_expenses) / 1000000).toFixed(1)}M
+                    </span>
+                  </div>
+                  {provider.net_income && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[var(--color-text-muted)]">Net Income</span>
+                      <span className={`font-mono ${Number(provider.net_income) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        ${(Number(provider.net_income) / 1000000).toFixed(2)}M
+                      </span>
+                    </div>
+                  )}
+                  {provider.cost_per_day && (
+                    <div className="flex justify-between pt-2 border-t border-[var(--color-border)]">
+                      <span className="text-sm text-[var(--color-text-muted)]">Cost/Day</span>
+                      <span className="font-mono">
+                        ${Number(provider.cost_per_day).toFixed(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* NPI Registry Data */}
+            {provider.npi && (
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <BadgeCheck className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium text-[var(--color-text-muted)]">NPI Registry</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-[var(--color-text-muted)]">NPI</span>
+                    <span className="font-mono text-blue-400">{provider.npi}</span>
+                  </div>
+                  {provider.authorized_official && (
+                    <>
+                      <div className="pt-2 border-t border-[var(--color-border)]">
+                        <span className="text-xs text-[var(--color-text-muted)]">Authorized Official</span>
+                        <p className="font-medium">{provider.authorized_official}</p>
+                        {provider.authorized_official_title && (
+                          <p className="text-sm text-[var(--color-text-muted)]">{provider.authorized_official_title}</p>
+                        )}
+                      </div>
+                      {provider.authorized_official_phone && (
+                        <div>
+                          <a
+                            href={`tel:${provider.authorized_official_phone}`}
+                            className="text-sm text-[var(--color-turquoise-400)] hover:underline"
+                          >
+                            {provider.authorized_official_phone}
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Nonprofit 990 Data */}
+            {provider.ein && (
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Heart className="w-4 h-4 text-pink-400" />
+                  <span className="text-sm font-medium text-[var(--color-text-muted)]">
+                    IRS 990 ({provider.nonprofit_tax_year})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-[var(--color-text-muted)]">EIN</span>
+                    <span className="font-mono">{provider.ein}</span>
+                  </div>
+                  {provider.nonprofit_revenue && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[var(--color-text-muted)]">990 Revenue</span>
+                      <span className="font-mono text-pink-400">
+                        ${(Number(provider.nonprofit_revenue) / 1000000).toFixed(1)}M
+                      </span>
+                    </div>
+                  )}
+                  {provider.nonprofit_assets && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-[var(--color-text-muted)]">Total Assets</span>
+                      <span className="font-mono">
+                        ${(Number(provider.nonprofit_assets) / 1000000).toFixed(1)}M
+                      </span>
+                    </div>
+                  )}
+                  {provider.exec_compensation && (
+                    <div className="flex justify-between pt-2 border-t border-[var(--color-border)]">
+                      <span className="text-sm text-[var(--color-text-muted)]">Exec Comp</span>
+                      <span className="font-mono">
+                        ${(Number(provider.exec_compensation) / 1000).toFixed(0)}K
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Provider Details */}

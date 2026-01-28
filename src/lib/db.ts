@@ -59,6 +59,29 @@ export interface HospiceProvider {
   cms_quality_star: number | null;
   cms_cahps_star: number | null;
   star_rating_date: string | null;
+  // Geolocation
+  latitude: number | null;
+  longitude: number | null;
+  geocode_quality: string | null;
+  // Cost Report financials
+  cost_report_year: number | null;
+  total_revenue: number | null;
+  total_expenses: number | null;
+  net_income: number | null;
+  total_patient_days: number | null;
+  cost_per_day: number | null;
+  // NPI Registry
+  npi: string | null;
+  authorized_official: string | null;
+  authorized_official_title: string | null;
+  authorized_official_phone: string | null;
+  taxonomy_code: string | null;
+  // Nonprofit 990
+  ein: string | null;
+  nonprofit_revenue: number | null;
+  nonprofit_assets: number | null;
+  exec_compensation: number | null;
+  nonprofit_tax_year: number | null;
 }
 
 export async function getStats() {
@@ -307,6 +330,57 @@ export async function getTopCountiesByDemographics(state: string, limit = 10) {
     GROUP BY county, county_population, county_pop_65_plus, county_pct_65_plus, county_median_income
     ORDER BY county_pop_65_plus DESC
     LIMIT ${limit}
+  `;
+}
+
+export async function getGeocodedProviders(classification?: string) {
+  if (classification) {
+    return await sql`
+      SELECT
+        ccn, provider_name, city, state, county, classification,
+        overall_score, estimated_adc, latitude, longitude,
+        county_pop_65_plus, county_pct_65_plus
+      FROM hospice_providers
+      WHERE latitude IS NOT NULL
+        AND longitude IS NOT NULL
+        AND classification = ${classification}
+      ORDER BY overall_score DESC
+    `;
+  }
+
+  return await sql`
+    SELECT
+      ccn, provider_name, city, state, county, classification,
+      overall_score, estimated_adc, latitude, longitude,
+      county_pop_65_plus, county_pct_65_plus
+    FROM hospice_providers
+    WHERE latitude IS NOT NULL
+      AND longitude IS NOT NULL
+      AND classification IN ('GREEN', 'YELLOW')
+    ORDER BY
+      CASE classification WHEN 'GREEN' THEN 1 ELSE 2 END,
+      overall_score DESC
+  `;
+}
+
+export async function getCountyHeatmapData() {
+  return await sql`
+    SELECT DISTINCT
+      county,
+      state,
+      county_fips,
+      county_pop_65_plus,
+      county_pct_65_plus,
+      county_median_income,
+      AVG(latitude) as lat,
+      AVG(longitude) as lng,
+      COUNT(*) FILTER (WHERE classification = 'GREEN') as green_count,
+      COUNT(*) FILTER (WHERE classification = 'YELLOW') as yellow_count
+    FROM hospice_providers
+    WHERE latitude IS NOT NULL
+      AND county_pop_65_plus IS NOT NULL
+    GROUP BY county, state, county_fips, county_pop_65_plus, county_pct_65_plus, county_median_income
+    ORDER BY county_pop_65_plus DESC
   `;
 }
 

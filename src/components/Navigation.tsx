@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useState, useRef, useEffect } from 'react';
 
@@ -19,6 +19,7 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/targets', label: 'All Targets', icon: List },
   { href: '/green', label: 'GREEN', icon: Target },
+  { href: '/map', label: 'Map', icon: Map },
   { href: '/watchlist', label: 'Watchlist', icon: Star },
 ];
 
