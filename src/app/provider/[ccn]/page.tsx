@@ -1,4 +1,4 @@
-import { getProvider, getRelatedProviders } from '@/lib/db';
+import { getProvider, getRelatedProviders, calculateOwnerCarryBackScore } from '@/lib/db';
 import { ClassificationBadge } from '@/components/ClassificationBadge';
 import { WatchlistButton } from '@/components/WatchlistButton';
 import { notFound } from 'next/navigation';
@@ -27,6 +27,10 @@ import {
   DollarSign,
   BadgeCheck,
   Heart,
+  Handshake,
+  PiggyBank,
+  Scale,
+  Sparkles,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -81,6 +85,9 @@ export default async function ProviderDetailPage({ params }: Props) {
 
   const hotMarkets = ['WA', 'OR', 'CA', 'MT', 'NV'];
   const isHotMarket = hotMarkets.includes(provider.state);
+
+  // Calculate Owner Carry-Back Score
+  const carryBackAnalysis = calculateOwnerCarryBackScore(provider);
 
   return (
     <div className="max-w-5xl mx-auto px-6">
@@ -630,6 +637,119 @@ export default async function ProviderDetailPage({ params }: Props) {
               <p className="text-[var(--color-text-secondary)] text-sm">{provider.downgrade_triggers || '—'}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Owner Carry-Back Analysis */}
+      <div className={`glass-card rounded-2xl p-6 mb-6 ${
+        carryBackAnalysis.likelihood === 'HIGH'
+          ? 'border-l-4 border-l-emerald-500'
+          : carryBackAnalysis.likelihood === 'MEDIUM'
+          ? 'border-l-4 border-l-amber-500'
+          : ''
+      }`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold font-[family-name:var(--font-display)] flex items-center gap-2">
+            <Handshake className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+            Owner Carry-Back Analysis
+          </h2>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <span className="text-2xl font-bold font-mono">{carryBackAnalysis.score}</span>
+              <span className="text-sm text-[var(--color-text-muted)]">/100</span>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              carryBackAnalysis.likelihood === 'HIGH'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : carryBackAnalysis.likelihood === 'MEDIUM'
+                ? 'bg-amber-500/20 text-amber-400'
+                : 'bg-gray-500/20 text-gray-400'
+            }`}>
+              {carryBackAnalysis.likelihood}
+            </span>
+          </div>
+        </div>
+
+        {/* Score Breakdown */}
+        <div className="mb-4">
+          <div className="h-3 rounded-full bg-[var(--color-bg-tertiary)] overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                carryBackAnalysis.likelihood === 'HIGH'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                  : carryBackAnalysis.likelihood === 'MEDIUM'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                  : 'bg-gradient-to-r from-gray-500 to-gray-600'
+              }`}
+              style={{ width: `${carryBackAnalysis.score}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Factors */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {carryBackAnalysis.factors.map((factor, i) => (
+            <div
+              key={i}
+              className={`p-3 rounded-lg ${
+                factor.score >= 15
+                  ? 'bg-emerald-500/10 border border-emerald-500/20'
+                  : factor.score >= 8
+                  ? 'bg-amber-500/10 border border-amber-500/20'
+                  : 'bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-sm">{factor.name}</span>
+                <span className={`text-sm font-mono ${
+                  factor.score >= 15
+                    ? 'text-emerald-400'
+                    : factor.score >= 8
+                    ? 'text-amber-400'
+                    : 'text-[var(--color-text-muted)]'
+                }`}>
+                  +{factor.score}
+                </span>
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)]">{factor.reason}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Acquisition Strategy Recommendation */}
+        {carryBackAnalysis.likelihood !== 'LOW' && (
+          <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-[var(--color-turquoise-500)]/10 to-[var(--color-turquoise-600)]/5 border border-[var(--color-turquoise-500)]/20">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-[var(--color-turquoise-400)] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-[var(--color-turquoise-400)] mb-1">
+                  {carryBackAnalysis.likelihood === 'HIGH'
+                    ? 'Prime Owner Carry-Back Candidate'
+                    : 'Potential Owner Carry-Back Opportunity'}
+                </p>
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  {carryBackAnalysis.likelihood === 'HIGH'
+                    ? `This provider shows strong indicators for owner financing. Single/simple ownership structure,
+                       no PE involvement, and ideal operational size suggest the owner may be receptive to a
+                       seller note arrangement. Consider approaching with a 10-20% carry-back proposal.`
+                    : `This provider has some favorable characteristics for owner financing, but may require
+                       additional due diligence. Consider exploring the ownership situation further before
+                       proposing seller financing terms.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Action */}
+        <div className="mt-4 flex items-center gap-3">
+          <Link
+            href="/owner-carryback"
+            className="text-sm text-[var(--color-turquoise-400)] hover:underline flex items-center gap-1"
+          >
+            View All Owner Carry-Back Opportunities
+            <ChevronRight className="w-4 h-4" />
+          </Link>
         </div>
       </div>
 

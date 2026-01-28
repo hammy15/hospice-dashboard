@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target, AlertTriangle, XCircle, Shield, TrendingUp, MapPin,
   Building2, Users, ChevronRight, ArrowUpRight, Zap, Activity,
-  BarChart3, PieChart, Map, DollarSign, Star, Filter, X
+  BarChart3, PieChart, Map, DollarSign, Star, Filter, X, Handshake,
+  Sparkles, Scale, PiggyBank
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -19,6 +20,8 @@ interface DashboardProps {
   scoreDistribution: any[];
   mapData: any[];
   conComparison: any[];
+  endemicStats?: any;
+  pipelineStats?: any;
 }
 
 const MiniBarChart = ({ data, maxValue, color }: { data: number[]; maxValue: number; color: string }) => (
@@ -80,6 +83,8 @@ export function DashboardClient({
   scoreDistribution,
   mapData,
   conComparison,
+  endemicStats,
+  pipelineStats,
 }: DashboardProps) {
   const router = useRouter();
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
@@ -225,15 +230,41 @@ export function DashboardClient({
           </Link>
         </motion.div>
 
-        {/* Quick Metrics */}
+        {/* Owner Carry-Back Opportunities */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="col-span-12 lg:col-span-3"
         >
+          <Link href="/owner-carryback" className="block h-full">
+            <div className="h-full p-4 rounded-2xl bg-gradient-to-br from-teal-500/10 to-emerald-600/5 border border-teal-500/20 hover:border-teal-500/40 hover:shadow-lg hover:shadow-teal-500/10 transition-all group cursor-pointer">
+              <div className="flex items-start justify-between mb-2">
+                <div className="p-2 rounded-xl bg-teal-500/20">
+                  <Handshake className="w-5 h-5 text-teal-400" />
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-teal-500/50 group-hover:text-teal-500 transition-colors" />
+              </div>
+              <div className="text-2xl font-bold text-teal-400 font-mono">
+                {endemicStats?.prime_carry_back_targets || 0}
+              </div>
+              <div className="text-sm text-[var(--color-text-muted)] mt-0.5">Owner Carry-Back</div>
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-400">Prime Targets</span>
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+
+        {/* Quick Metrics */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22 }}
+          className="col-span-12 lg:col-span-6"
+        >
           <div className="h-full p-4 rounded-2xl glass-card">
-            <div className="grid grid-cols-2 gap-3 h-full">
+            <div className="grid grid-cols-4 gap-3 h-full">
               <Link href="/search?minAdc=20&maxAdc=60" className="p-3 rounded-xl bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
                 <div className="text-xs text-[var(--color-text-muted)] mb-1">Avg ADC</div>
                 <div className="text-xl font-bold font-mono">{stats.avg_green_adc || '—'}</div>
@@ -244,6 +275,16 @@ export function DashboardClient({
                 <div className="text-xl font-bold font-mono">{stats.avg_green_score || '—'}</div>
                 <div className="text-[10px] text-[var(--color-turquoise-500)]">GREEN avg</div>
               </Link>
+              <Link href="/owner-carryback" className="p-3 rounded-xl bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
+                <div className="text-xs text-[var(--color-text-muted)] mb-1">Endemic</div>
+                <div className="text-xl font-bold font-mono text-teal-400">{endemicStats?.endemic_green || 0}</div>
+                <div className="text-[10px] text-teal-400">Independent GREEN</div>
+              </Link>
+              <div className="p-3 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <div className="text-xs text-[var(--color-text-muted)] mb-1">Est. Value</div>
+                <div className="text-xl font-bold font-mono">${pipelineStats?.total_market_value_mm || 0}M</div>
+                <div className="text-[10px] text-[var(--color-text-muted)]">GREEN market</div>
+              </div>
             </div>
           </div>
         </motion.div>

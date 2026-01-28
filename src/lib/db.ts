@@ -440,3 +440,268 @@ export async function getProvidersByFilter(filters: {
 
   return await query;
 }
+
+// ============================================
+// OWNER CARRY-BACK & ENDEMIC COMPANY ANALYSIS
+// ============================================
+
+// Calculate Owner Carry-Back likelihood score
+// Endemic companies = single owner, not PE-backed, not chain, smaller ADC
+export function calculateOwnerCarryBackScore(provider: HospiceProvider): {
+  score: number;
+  factors: { name: string; score: number; reason: string }[];
+  likelihood: 'HIGH' | 'MEDIUM' | 'LOW';
+} {
+  const factors: { name: string; score: number; reason: string }[] = [];
+  let totalScore = 0;
+
+  // 1. Not PE-backed (30 points max)
+  if (!provider.pe_backed) {
+    factors.push({ name: 'Independent Ownership', score: 30, reason: 'Not backed by private equity - more likely to consider creative financing' });
+    totalScore += 30;
+  } else {
+    factors.push({ name: 'PE Ownership', score: 0, reason: 'PE-backed companies typically require institutional-style exits' });
+  }
+
+  // 2. Not chain affiliated (20 points max)
+  if (!provider.chain_affiliated) {
+    factors.push({ name: 'Standalone Operation', score: 20, reason: 'Not part of larger chain - owner has full decision authority' });
+    totalScore += 20;
+  } else {
+    factors.push({ name: 'Chain Affiliated', score: 5, reason: 'Part of chain - may have corporate constraints on deal structure' });
+    totalScore += 5;
+  }
+
+  // 3. Single owner or simple ownership (20 points max)
+  const ownerCount = provider.owner_count || 1;
+  if (ownerCount === 1) {
+    factors.push({ name: 'Single Owner', score: 20, reason: 'Sole owner can make quick decisions on seller financing' });
+    totalScore += 20;
+  } else if (ownerCount <= 3) {
+    factors.push({ name: 'Small Ownership Group', score: 12, reason: 'Small partnership - consensus easier to reach' });
+    totalScore += 12;
+  } else {
+    factors.push({ name: 'Multiple Owners', score: 5, reason: 'Multiple stakeholders may complicate carry-back terms' });
+    totalScore += 5;
+  }
+
+  // 4. ADC Sweet Spot 20-60 (15 points max) - ideal size for owner carry-back
+  const adc = provider.estimated_adc || 0;
+  if (adc >= 20 && adc <= 60) {
+    factors.push({ name: 'Ideal Size', score: 15, reason: 'ADC 20-60 is perfect for owner carry-back - established but manageable' });
+    totalScore += 15;
+  } else if (adc > 0 && adc < 20) {
+    factors.push({ name: 'Small Operation', score: 10, reason: 'Smaller ADC - owner may need carry-back for viable purchase price' });
+    totalScore += 10;
+  } else if (adc > 60 && adc <= 100) {
+    factors.push({ name: 'Medium Operation', score: 8, reason: 'Larger ADC - may attract institutional buyers but still viable' });
+    totalScore += 8;
+  } else {
+    factors.push({ name: 'Large Operation', score: 3, reason: 'Large ADC typically attracts PE/strategic buyers' });
+    totalScore += 3;
+  }
+
+  // 5. No recent ownership change (10 points max)
+  if (!provider.recent_ownership_change) {
+    factors.push({ name: 'Stable Ownership', score: 10, reason: 'Long-term owner more likely to have emotional investment and consider flexible terms' });
+    totalScore += 10;
+  } else {
+    factors.push({ name: 'Recent Change', score: 2, reason: 'Recent ownership change - may indicate PE flip or distressed situation' });
+    totalScore += 2;
+  }
+
+  // 6. For-profit structure bonus (5 points max)
+  if (provider.ownership_type_cms?.toLowerCase().includes('for-profit') ||
+      provider.ownership_type_cms?.toLowerCase().includes('proprietary')) {
+    factors.push({ name: 'For-Profit', score: 5, reason: 'For-profit structure - owner seeks return, more receptive to deal structures' });
+    totalScore += 5;
+  }
+
+  // Determine likelihood
+  let likelihood: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
+  if (totalScore >= 70) likelihood = 'HIGH';
+  else if (totalScore >= 45) likelihood = 'MEDIUM';
+
+  return { score: totalScore, factors, likelihood };
+}
+
+// Get Owner Carry-Back Candidates
+export async function getOwnerCarryBackCandidates(limit = 50) {
+  return await sql`
+    SELECT
+      *,
+      CASE
+        WHEN pe_backed = false AND chain_affiliated = false AND COALESCE(owner_count, 1) <= 2
+             AND estimated_adc BETWEEN 20 AND 60 AND recent_ownership_change = false
+        THEN 'HIGH'
+        WHEN pe_backed = false AND (chain_affiliated = false OR COALESCE(owner_count, 1) <= 3)
+        THEN 'MEDIUM'
+        ELSE 'LOW'
+      END as carry_back_likelihood
+    FROM hospice_providers
+    WHERE classification IN ('GREEN', 'YELLOW')
+      AND pe_backed = false
+    ORDER BY
+      CASE
+        WHEN pe_backed = false AND chain_affiliated = false AND COALESCE(owner_count, 1) <= 2
+             AND estimated_adc BETWEEN 20 AND 60 AND recent_ownership_change = false
+        THEN 1
+        WHEN pe_backed = false AND (chain_affiliated = false OR COALESCE(owner_count, 1) <= 3)
+        THEN 2
+        ELSE 3
+      END,
+      CASE classification WHEN 'GREEN' THEN 1 ELSE 2 END,
+      overall_score DESC
+    LIMIT ${limit}
+  `;
+}
+
+// Get Endemic Company Statistics
+export async function getEndemicStats() {
+  const result = await sql`
+    SELECT
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false) as endemic_count,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'GREEN') as endemic_green,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'YELLOW') as endemic_yellow,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND COALESCE(owner_count, 1) = 1) as single_owner_endemic,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND estimated_adc BETWEEN 20 AND 60) as ideal_size_endemic,
+      COUNT(*) FILTER (
+        WHERE pe_backed = false
+          AND chain_affiliated = false
+          AND COALESCE(owner_count, 1) <= 2
+          AND estimated_adc BETWEEN 20 AND 60
+          AND recent_ownership_change = false
+          AND classification = 'GREEN'
+      ) as prime_carry_back_targets,
+      ROUND(AVG(estimated_adc) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'GREEN'), 1) as avg_endemic_adc,
+      ROUND(AVG(overall_score) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'GREEN'), 1) as avg_endemic_score
+    FROM hospice_providers
+  `;
+  return result[0];
+}
+
+// Get Endemic Companies by State
+export async function getEndemicByState() {
+  return await sql`
+    SELECT
+      state,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false) as endemic_count,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'GREEN') as endemic_green,
+      COUNT(*) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'YELLOW') as endemic_yellow,
+      BOOL_OR(con_state) as is_con_state,
+      ROUND(AVG(overall_score) FILTER (WHERE pe_backed = false AND chain_affiliated = false AND classification = 'GREEN'), 1) as avg_score
+    FROM hospice_providers
+    WHERE pe_backed = false AND chain_affiliated = false
+    GROUP BY state
+    ORDER BY endemic_green DESC
+    LIMIT 20
+  `;
+}
+
+// Get Acquisition Deal Pipeline Stats
+export async function getDealPipelineStats() {
+  const result = await sql`
+    SELECT
+      -- Platform candidates (larger, GREEN, ideal for building)
+      COUNT(*) FILTER (
+        WHERE classification = 'GREEN'
+          AND estimated_adc >= 40
+          AND overall_score >= 70
+      ) as platform_candidates,
+
+      -- Tuck-in candidates (smaller, can be added to existing platform)
+      COUNT(*) FILTER (
+        WHERE classification IN ('GREEN', 'YELLOW')
+          AND estimated_adc < 40
+          AND pe_backed = false
+      ) as tuckin_candidates,
+
+      -- Owner carry-back prime targets
+      COUNT(*) FILTER (
+        WHERE pe_backed = false
+          AND chain_affiliated = false
+          AND COALESCE(owner_count, 1) <= 2
+          AND classification = 'GREEN'
+      ) as owner_finance_targets,
+
+      -- Outreach ready
+      COUNT(*) FILTER (
+        WHERE outreach_readiness = 'Ready'
+          AND classification = 'GREEN'
+      ) as outreach_ready,
+
+      -- With contact info
+      COUNT(*) FILTER (
+        WHERE (phone_number IS NOT NULL OR administrator_phone IS NOT NULL)
+          AND classification = 'GREEN'
+      ) as contactable_green,
+
+      -- CON protected premium
+      COUNT(*) FILTER (
+        WHERE con_state = true
+          AND classification = 'GREEN'
+          AND pe_backed = false
+      ) as con_protected_independent,
+
+      -- Financial data available
+      COUNT(*) FILTER (
+        WHERE total_revenue IS NOT NULL
+          AND classification = 'GREEN'
+      ) as with_financials,
+
+      -- Total estimated market value (rough: $10K per ADC patient)
+      ROUND(SUM(estimated_adc * 10000) FILTER (WHERE classification = 'GREEN') / 1000000, 1) as total_market_value_mm
+    FROM hospice_providers
+  `;
+  return result[0];
+}
+
+// Get Top Owner Carry-Back Opportunities (detailed)
+export async function getTopOwnerCarryBackOpportunities(limit = 25) {
+  return await sql`
+    SELECT
+      *,
+      -- Calculate a composite carry-back score
+      (
+        CASE WHEN pe_backed = false THEN 30 ELSE 0 END +
+        CASE WHEN chain_affiliated = false THEN 20 ELSE 5 END +
+        CASE
+          WHEN COALESCE(owner_count, 1) = 1 THEN 20
+          WHEN COALESCE(owner_count, 1) <= 3 THEN 12
+          ELSE 5
+        END +
+        CASE
+          WHEN estimated_adc BETWEEN 20 AND 60 THEN 15
+          WHEN estimated_adc < 20 THEN 10
+          WHEN estimated_adc BETWEEN 61 AND 100 THEN 8
+          ELSE 3
+        END +
+        CASE WHEN recent_ownership_change = false THEN 10 ELSE 2 END +
+        CASE WHEN ownership_type_cms ILIKE '%for-profit%' OR ownership_type_cms ILIKE '%proprietary%' THEN 5 ELSE 0 END
+      ) as carry_back_score
+    FROM hospice_providers
+    WHERE classification IN ('GREEN', 'YELLOW')
+      AND pe_backed = false
+      AND chain_affiliated = false
+    ORDER BY
+      (
+        CASE WHEN pe_backed = false THEN 30 ELSE 0 END +
+        CASE WHEN chain_affiliated = false THEN 20 ELSE 5 END +
+        CASE
+          WHEN COALESCE(owner_count, 1) = 1 THEN 20
+          WHEN COALESCE(owner_count, 1) <= 3 THEN 12
+          ELSE 5
+        END +
+        CASE
+          WHEN estimated_adc BETWEEN 20 AND 60 THEN 15
+          WHEN estimated_adc < 20 THEN 10
+          WHEN estimated_adc BETWEEN 61 AND 100 THEN 8
+          ELSE 3
+        END +
+        CASE WHEN recent_ownership_change = false THEN 10 ELSE 2 END +
+        CASE WHEN ownership_type_cms ILIKE '%for-profit%' OR ownership_type_cms ILIKE '%proprietary%' THEN 5 ELSE 0 END
+      ) DESC,
+      overall_score DESC
+    LIMIT ${limit}
+  `;
+}

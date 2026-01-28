@@ -26,6 +26,7 @@ const navItems = [
 ];
 
 const toolsItems = [
+  { href: '/owner-carryback', label: 'Owner Carry-Back', icon: Star },
   { href: '/competitors', label: 'Competitors', icon: Building2 },
   { href: '/scoring', label: 'Custom Scoring', icon: Sliders },
   { href: '/outreach', label: 'Outreach', icon: Mail },
@@ -55,7 +56,7 @@ export function Navigation() {
   }, []);
 
   const isHotMarketActive = pathname.startsWith('/market/');
-  const isToolsActive = ['/competitors', '/scoring', '/outreach'].includes(pathname);
+  const isToolsActive = ['/owner-carryback', '/competitors', '/scoring', '/outreach'].includes(pathname);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-[var(--color-border)]">

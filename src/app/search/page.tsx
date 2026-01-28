@@ -25,6 +25,8 @@ import {
   Target,
   TrendingUp,
   BarChart3,
+  Handshake,
+  Sparkles,
 } from 'lucide-react';
 
 interface SearchFilters {
@@ -53,6 +55,8 @@ interface SearchFilters {
   chainAffiliated?: string;
   recentOwnershipChange?: string;
   conStateOnly?: boolean;
+  endemicOnly?: boolean;
+  ownerCarryBackOnly?: boolean;
   hasNpi?: boolean;
   hasEin?: boolean;
   hasAuthorizedOfficial?: boolean;
@@ -647,6 +651,53 @@ export default function SearchPage() {
                   />
                   <span className="text-sm">Recent Ownership Change</span>
                 </label>
+
+                {/* Acquisition-Focused Filters */}
+                <div className="pt-3 mt-3 border-t border-[var(--color-border)]">
+                  <span className="text-xs font-semibold text-[var(--color-turquoise-400)] uppercase tracking-wider">
+                    Acquisition Filters
+                  </span>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={filters.endemicOnly || false}
+                    onChange={(e) => {
+                      updateFilter('endemicOnly', e.target.checked);
+                      if (e.target.checked) {
+                        updateFilter('peBacked', 'no');
+                        updateFilter('chainAffiliated', 'no');
+                      }
+                    }}
+                    className="w-4 h-4 rounded"
+                  />
+                  <Sparkles className="w-4 h-4 text-teal-400" />
+                  <span className="text-sm font-medium">Endemic Companies Only</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={filters.ownerCarryBackOnly || false}
+                    onChange={(e) => {
+                      updateFilter('ownerCarryBackOnly', e.target.checked);
+                      if (e.target.checked) {
+                        updateFilter('peBacked', 'no');
+                        updateFilter('chainAffiliated', 'no');
+                        updateFilter('minAdc', '20');
+                        updateFilter('maxAdc', '60');
+                      }
+                    }}
+                    className="w-4 h-4 rounded"
+                  />
+                  <Handshake className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-medium">Owner Carry-Back Candidates</span>
+                </label>
+
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                  Owner carry-back: Not PE-backed, independent, ADC 20-60
+                </p>
               </div>
             )}
           </div>

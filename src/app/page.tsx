@@ -1,11 +1,11 @@
-import { getStats, getStateStats, getTopTargets, getOwnershipStats, getAdcDistribution, getScoreDistribution, getMapData, getConStateComparison } from '@/lib/db';
+import { getStats, getStateStats, getTopTargets, getOwnershipStats, getAdcDistribution, getScoreDistribution, getMapData, getConStateComparison, getEndemicStats, getDealPipelineStats } from '@/lib/db';
 import { DashboardClient } from '@/components/DashboardClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function Dashboard() {
-  const [stats, stateStats, topTargets, ownershipStats, adcDistribution, scoreDistribution, mapData, conComparison] = await Promise.all([
+  const [stats, stateStats, topTargets, ownershipStats, adcDistribution, scoreDistribution, mapData, conComparison, endemicStats, pipelineStats] = await Promise.all([
     getStats(),
     getStateStats(),
     getTopTargets(5),
@@ -14,6 +14,8 @@ export default async function Dashboard() {
     getScoreDistribution(),
     getMapData(),
     getConStateComparison(),
+    getEndemicStats(),
+    getDealPipelineStats(),
   ]);
 
   return (
@@ -26,6 +28,8 @@ export default async function Dashboard() {
       scoreDistribution={scoreDistribution as any}
       mapData={mapData as any}
       conComparison={conComparison as any}
+      endemicStats={endemicStats as any}
+      pipelineStats={pipelineStats as any}
     />
   );
 }
