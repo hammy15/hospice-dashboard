@@ -3,6 +3,100 @@ import { Pool } from '@neondatabase/serverless';
 
 export const dynamic = 'force-dynamic';
 
+// GET handler for simple query-string based searches
+export async function GET(request: NextRequest) {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const searchParams = request.nextUrl.searchParams;
+
+  try {
+    const conditions: string[] = ['1=1'];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Parse query parameters
+    const state = searchParams.get('state');
+    const classification = searchParams.get('classification');
+    const search = searchParams.get('search') || searchParams.get('q');
+    const minAdc = searchParams.get('minAdc');
+    const maxAdc = searchParams.get('maxAdc');
+    const conOnly = searchParams.get('conOnly') === 'true';
+    const peOnly = searchParams.get('peOnly') === 'true';
+    const independentOnly = searchParams.get('independentOnly') === 'true';
+    const limit = Math.min(Number(searchParams.get('limit')) || 100, 500);
+    const offset = Number(searchParams.get('offset')) || 0;
+
+    if (state) {
+      conditions.push(`UPPER(state) = $${paramIndex++}`);
+      params.push(state.toUpperCase());
+    }
+    if (classification && classification !== 'ALL') {
+      conditions.push(`classification = $${paramIndex++}`);
+      params.push(classification.toUpperCase());
+    }
+    if (search) {
+      conditions.push(`(LOWER(provider_name) LIKE $${paramIndex} OR LOWER(city) LIKE $${paramIndex} OR LOWER(county) LIKE $${paramIndex})`);
+      params.push(`%${search.toLowerCase()}%`);
+      paramIndex++;
+    }
+    if (minAdc) {
+      conditions.push(`estimated_adc >= $${paramIndex++}`);
+      params.push(Number(minAdc));
+    }
+    if (maxAdc) {
+      conditions.push(`estimated_adc <= $${paramIndex++}`);
+      params.push(Number(maxAdc));
+    }
+    if (conOnly) {
+      conditions.push(`con_state = true`);
+    }
+    if (peOnly) {
+      conditions.push(`pe_backed = true`);
+    }
+    if (independentOnly) {
+      conditions.push(`pe_backed = false AND chain_affiliated = false`);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM hospice_providers WHERE ${whereClause}`,
+      params
+    );
+    const total = Number(countResult.rows[0]?.total || 0);
+
+    // Get results
+    const query = `
+      SELECT
+        ccn, provider_name, city, state, county, classification,
+        overall_score, quality_score, compliance_score, operational_score, market_score,
+        estimated_adc, adc_fit, ownership_type_cms, pe_backed, chain_affiliated,
+        con_state, competitive_density, phone_number, website,
+        county_pop_65_plus, county_pct_65_plus
+      FROM hospice_providers
+      WHERE ${whereClause}
+      ORDER BY overall_score DESC NULLS LAST
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+
+    const result = await pool.query(query, params);
+    await pool.end();
+
+    return NextResponse.json({
+      providers: result.rows,
+      total,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    console.error('Search GET error:', error);
+    await pool.end();
+    return NextResponse.json({ error: 'Search failed' }, { status: 500 });
+  }
+}
+
+// POST handler for advanced searches with complex filters
 export async function POST(request: NextRequest) {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
