@@ -343,7 +343,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">% Population 65+</span>
-                  <span className="font-semibold">{reportData.provider.county_pct_65_plus ? reportData.provider.county_pct_65_plus.toFixed(1) + '%' : '-'}</span>
+                  <span className="font-semibold">{reportData.provider.county_pct_65_plus ? Number(reportData.provider.county_pct_65_plus).toFixed(1) + '%' : '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Median Income</span>

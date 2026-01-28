@@ -192,10 +192,10 @@ export default function SearchPage() {
       `"${p.city}"`,
       p.state,
       p.classification,
-      p.overall_score?.toFixed(1) || '',
+      p.overall_score ? Number(p.overall_score).toFixed(1) : '',
       p.estimated_adc || '',
-      p.total_revenue ? (p.total_revenue / 1000000).toFixed(2) : '',
-      p.net_income ? (p.net_income / 1000000).toFixed(2) : '',
+      p.total_revenue ? (Number(p.total_revenue) / 1000000).toFixed(2) : '',
+      p.net_income ? (Number(p.net_income) / 1000000).toFixed(2) : '',
       p.county_pop_65_plus || '',
       p.cms_cahps_star || '',
       p.npi || '',
@@ -809,7 +809,7 @@ export default function SearchPage() {
                 <div>
                   <p className="text-2xl font-bold">
                     {aggregates.total_revenue
-                      ? `$${(aggregates.total_revenue / 1000000000).toFixed(1)}B`
+                      ? `$${(Number(aggregates.total_revenue) / 1000000000).toFixed(1)}B`
                       : '—'}
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)]">Total Revenue</p>
@@ -907,14 +907,14 @@ export default function SearchPage() {
                           </span>
                         </td>
                         <td className="p-3 text-right font-mono">
-                          {provider.overall_score?.toFixed(1) || '—'}
+                          {provider.overall_score ? Number(provider.overall_score).toFixed(1) : '—'}
                         </td>
                         <td className="p-3 text-right font-mono">
                           {provider.estimated_adc || '—'}
                         </td>
                         <td className="p-3 text-right font-mono text-emerald-400">
                           {provider.total_revenue
-                            ? `$${(provider.total_revenue / 1000000).toFixed(1)}M`
+                            ? `$${(Number(provider.total_revenue) / 1000000).toFixed(1)}M`
                             : '—'}
                         </td>
                         <td className="p-3 text-right font-mono">
