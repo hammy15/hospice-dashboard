@@ -3,9 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star, ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3, Building2, Sliders, Mail, User, Briefcase, Users, Calculator, GitCompare, PieChart, Download, Shield, FileText } from 'lucide-react';
+import {
+  LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star,
+  ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3,
+  Building2, Sliders, Mail, User, Briefcase, Users, Calculator,
+  GitCompare, PieChart, Download, Shield, FileText, Play, DollarSign
+} from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from './AuthProvider';
+import { useDemo } from './AppShell';
 import { useState, useRef, useEffect } from 'react';
 
 const hotMarkets = [
@@ -16,34 +22,53 @@ const hotMarkets = [
   { state: 'NV', label: 'Nevada', conState: false },
 ];
 
+// Reorganized in logical user flow order:
+// 1. Dashboard (overview) → 2. Insights (market intel) → 3. Search (find) →
+// 4. Map (visualize) → 5. Targets (browse) → 6. Top 10 (best picks)
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/insights', label: 'Insights', icon: BarChart3 },
-  { href: '/top-10', label: 'Top 10', icon: Trophy },
-  { href: '/targets', label: 'Targets', icon: List },
-  { href: '/map', label: 'Map', icon: Map },
   { href: '/search', label: 'Search', icon: Search },
+  { href: '/map', label: 'Map', icon: Map },
+  { href: '/targets', label: 'Targets', icon: List },
+  { href: '/top-10', label: 'Top 10', icon: Trophy },
 ];
 
+// Reorganized tools in workflow order:
+// Deal workflow → Analysis tools → Research tools → Export
 const toolsItems = [
-  { href: '/deals', label: 'Deal Pipeline', icon: Briefcase },
-  { href: '/contacts', label: 'Contacts CRM', icon: Users },
-  { href: '/owner-carryback', label: 'Owner Carry-Back', icon: Star },
-  { href: '/valuation', label: 'Valuation', icon: Calculator },
-  { href: '/compare', label: 'Compare', icon: GitCompare },
-  { href: '/consolidation', label: 'Consolidation', icon: PieChart },
-  { href: '/compliance', label: 'Compliance', icon: Shield },
-  { href: '/export', label: 'Export', icon: Download },
-  { href: '/reports', label: 'Reports', icon: FileText },
-  { href: '/competitors', label: 'Competitors', icon: Building2 },
-  { href: '/scoring', label: 'Custom Scoring', icon: Sliders },
-  { href: '/outreach', label: 'Outreach', icon: Mail },
+  // Deal Workflow
+  { href: '/deals', label: 'Deal Pipeline', icon: Briefcase, section: 'workflow' },
+  { href: '/contacts', label: 'Contacts CRM', icon: Users, section: 'workflow' },
+  { href: '/outreach', label: 'Outreach', icon: Mail, section: 'workflow' },
+  // Analysis Tools
+  { href: '/valuation', label: 'Valuation', icon: Calculator, section: 'analysis' },
+  { href: '/compare', label: 'Compare', icon: GitCompare, section: 'analysis' },
+  { href: '/reports', label: 'Reports', icon: FileText, section: 'analysis' },
+  // Opportunity Finders
+  { href: '/owner-carryback', label: 'Owner Carry-Back', icon: DollarSign, section: 'opportunities' },
+  { href: '/scoring', label: 'Custom Scoring', icon: Sliders, section: 'opportunities' },
+  // Market Research
+  { href: '/consolidation', label: 'Consolidation', icon: PieChart, section: 'research' },
+  { href: '/compliance', label: 'Compliance', icon: Shield, section: 'research' },
+  { href: '/competitors', label: 'Competitors', icon: Building2, section: 'research' },
+  // Export
+  { href: '/export', label: 'Export', icon: Download, section: 'export' },
+];
+
+const toolsSections = [
+  { key: 'workflow', label: 'Deal Workflow' },
+  { key: 'analysis', label: 'Analysis' },
+  { key: 'opportunities', label: 'Opportunities' },
+  { key: 'research', label: 'Research' },
+  { key: 'export', label: 'Data' },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const { openDemo } = useDemo();
   const [hotMarketsOpen, setHotMarketsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,7 +89,7 @@ export function Navigation() {
   }, []);
 
   const isHotMarketActive = pathname.startsWith('/market/');
-  const isToolsActive = ['/deals', '/contacts', '/owner-carryback', '/valuation', '/compare', '/consolidation', '/compliance', '/export', '/reports', '/competitors', '/scoring', '/outreach'].includes(pathname);
+  const isToolsActive = toolsItems.some(item => pathname === item.href);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-[var(--color-border)]">
@@ -217,26 +242,38 @@ export function Navigation() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden max-h-[70vh] overflow-y-auto"
+                    className="absolute top-full mt-2 right-0 w-64 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden max-h-[70vh] overflow-y-auto"
                   >
                     <div className="p-2">
-                      {toolsItems.map((item) => {
-                        const isActive = pathname === item.href;
-                        const Icon = item.icon;
+                      {toolsSections.map((section) => {
+                        const sectionItems = toolsItems.filter(item => item.section === section.key);
+                        if (sectionItems.length === 0) return null;
+
                         return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setToolsOpen(false)}
-                            className={`flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors ${
-                              isActive
-                                ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
-                                : 'hover:bg-[var(--color-bg-hover)]'
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span className="font-medium">{item.label}</span>
-                          </Link>
+                          <div key={section.key} className="mb-2">
+                            <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                              {section.label}
+                            </div>
+                            {sectionItems.map((item) => {
+                              const isActive = pathname === item.href;
+                              const Icon = item.icon;
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  onClick={() => setToolsOpen(false)}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                                    isActive
+                                      ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
+                                      : 'hover:bg-[var(--color-bg-hover)]'
+                                  }`}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                  <span className="font-medium text-sm">{item.label}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
                         );
                       })}
                     </div>
@@ -246,6 +283,16 @@ export function Navigation() {
             </div>
 
             <div className="ml-4 pl-4 border-l border-[var(--color-border)] flex items-center gap-2">
+              {/* Demo Button */}
+              <button
+                onClick={openDemo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-400 hover:from-purple-500/20 hover:to-pink-500/20 transition-all border border-purple-500/20"
+                title="Watch Platform Demo"
+              >
+                <Play className="w-3.5 h-3.5" />
+                Demo
+              </button>
+
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-all duration-200 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
