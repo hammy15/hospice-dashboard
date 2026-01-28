@@ -34,7 +34,11 @@
   --color-text-secondary: #1e293b;
   --color-text-muted: #475569;
 
-  /* Darker turquoise for light mode visibility */
+  /* Override turquoise colors for light mode - much darker for readability */
+  --color-turquoise-300: #007a6a;
+  --color-turquoise-400: #006b5a;
+  --color-turquoise-500: #005c50;
+  --color-turquoise-600: #004d42;
   --color-turquoise-text: #007a6a;
   --color-turquoise-text-hover: #005c50;
 
