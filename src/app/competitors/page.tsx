@@ -126,7 +126,7 @@ export default function CompetitorsPage() {
             <span className="text-sm text-[var(--color-text-muted)]">Avg PE Penetration</span>
           </div>
           <div className="text-3xl font-bold">
-            {data?.marketShare ? Math.round(data.marketShare.reduce((a, b) => a + (Number(b.pe_penetration) || 0), 0) / data.marketShare.length) : 0}%
+            {data?.marketShare ? (data.marketShare.reduce((a, b) => a + (Number(b.pe_penetration) || 0), 0) / data.marketShare.length).toFixed(1) : 0}%
           </div>
         </div>
 
