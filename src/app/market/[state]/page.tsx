@@ -1,8 +1,9 @@
 import { getMarketTargets, getMarketStats, getMarketCityBreakdown, getMarketDemographics, getTopCountiesByDemographics } from '@/lib/db';
 import { ProviderTable } from '@/components/ProviderTable';
 import { StatCard } from '@/components/StatCard';
+import { StateMapView } from '@/components/StateMapView';
 import { notFound } from 'next/navigation';
-import { MapPin, Shield, Building2, Phone, Globe, TrendingUp, Users, DollarSign, PieChart } from 'lucide-react';
+import { MapPin, Shield, Building2, Phone, Globe, TrendingUp, Users, DollarSign, PieChart, Map } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -181,6 +182,18 @@ export default async function MarketPage({ params }: { params: Promise<{ state: 
           subtitle="Phone numbers"
           icon="building"
         />
+      </div>
+
+      {/* Interactive Map */}
+      <div className="glass-card rounded-2xl p-6 mb-8">
+        <h3 className="font-semibold text-[var(--color-turquoise-400)] mb-4 flex items-center gap-2">
+          <Map className="w-5 h-5" />
+          {market.name} Provider Map
+          <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
+            Top 15% opportunities glow green
+          </span>
+        </h3>
+        <StateMapView state={state} className="h-[500px]" />
       </div>
 
       {/* Star Rating Summary */}
