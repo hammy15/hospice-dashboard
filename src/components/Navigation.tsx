@@ -68,7 +68,7 @@ export function Navigation() {
                   href={item.href}
                   className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                     isActive
-                      ? 'text-[var(--color-turquoise-600)]'
+                      ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
                   }`}
                 >
@@ -91,7 +91,7 @@ export function Navigation() {
                 onClick={() => setHotMarketsOpen(!hotMarketsOpen)}
                 className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                   isHotMarketActive
-                    ? 'text-[var(--color-turquoise-600)]'
+                    ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
                     : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
                 }`}
               >
@@ -129,7 +129,7 @@ export function Navigation() {
                             onClick={() => setHotMarketsOpen(false)}
                             className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
                               isActive
-                                ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-600)]'
+                                ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
                                 : 'hover:bg-[var(--color-bg-hover)]'
                             }`}
                           >
