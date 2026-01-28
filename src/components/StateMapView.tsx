@@ -75,18 +75,15 @@ export function StateMapView({ state, className = '' }: StateMapViewProps) {
     const style = document.createElement('style');
     style.textContent = `
       @keyframes pulse-glow {
-        0%, 100% { 
-          transform: scale(1); 
-          box-shadow: 0 0 10px 3px rgba(16, 185, 129, 0.6);
+        0%, 100% {
+          box-shadow: 0 0 8px 2px rgba(16, 185, 129, 0.5);
         }
-        50% { 
-          transform: scale(1.15); 
-          box-shadow: 0 0 20px 8px rgba(16, 185, 129, 0.9);
+        50% {
+          box-shadow: 0 0 16px 6px rgba(16, 185, 129, 0.9);
         }
       }
       .top-provider-marker {
         animation: pulse-glow 2s ease-in-out infinite;
-        border: 2px solid #10b981 !important;
       }
     `;
     document.head.appendChild(style);
