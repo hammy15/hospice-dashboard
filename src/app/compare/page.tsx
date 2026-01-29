@@ -51,7 +51,7 @@ const formatNumber = (value: number | null | undefined, decimals = 0) => {
 
 const formatPercent = (value: number | null) => {
   if (!value) return '-';
-  return `${value.toFixed(1)}%`;
+  return `${Number(value).toFixed(1)}%`;
 };
 
 const getClassificationColor = (classification: string) => {

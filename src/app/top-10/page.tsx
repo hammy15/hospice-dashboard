@@ -85,9 +85,10 @@ interface StateDistribution {
 
 const formatCurrency = (value: number | null) => {
   if (!value) return 'N/A';
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-  return `$${value.toFixed(0)}`;
+  const num = Number(value);
+  if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`;
+  return `$${num.toFixed(0)}`;
 };
 
 const formatNumber = (value: number | null) => {

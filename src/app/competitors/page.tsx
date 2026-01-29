@@ -188,7 +188,7 @@ export default function CompetitorsPage() {
                         <div className="w-32 h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
                           <div
                             className="h-full bg-purple-400 rounded-full"
-                            style={{ width: `${Math.min(row.pe_penetration, 100)}%` }}
+                            style={{ width: `${Math.min(Number(row.pe_penetration) || 0, 100)}%` }}
                           />
                         </div>
                       </td>

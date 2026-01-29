@@ -31,7 +31,7 @@ const formatNumber = (value: number | null) => {
 
 const formatPercent = (value: number | null) => {
   if (value === null) return '-';
-  return `${value.toFixed(1)}%`;
+  return `${Number(value).toFixed(1)}%`;
 };
 
 const getPenetrationColor = (pct: number) => {

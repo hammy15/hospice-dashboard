@@ -27,10 +27,11 @@ interface InsightsData {
 
 const formatCurrency = (val: number | null) => {
   if (!val) return '—';
-  if (val >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
-  if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
-  if (val >= 1e3) return `$${(val / 1e3).toFixed(0)}K`;
-  return `$${val.toFixed(0)}`;
+  const num = Number(val);
+  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
+  if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
+  if (num >= 1e3) return `$${(num / 1e3).toFixed(0)}K`;
+  return `$${num.toFixed(0)}`;
 };
 
 const formatNumber = (val: number | null) => {
