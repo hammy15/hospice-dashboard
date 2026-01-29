@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Data files
 data/
+test-results/
