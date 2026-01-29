@@ -7,8 +7,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
-    // Check if user has seen splash before in this session
-    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    // Check if user has seen splash before (persists forever)
+    const hasSeenSplash = localStorage.getItem('hasSeenSplash');
     if (hasSeenSplash) {
       onComplete();
       return;
@@ -20,7 +20,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       setTimeout(() => setPhase(3), 1500),  // Stats animate
       setTimeout(() => setPhase(4), 2800),  // Fade out begins
       setTimeout(() => {
-        sessionStorage.setItem('hasSeenSplash', 'true');
+        localStorage.setItem('hasSeenSplash', 'true');
         onComplete();
       }, 3500),
     ];

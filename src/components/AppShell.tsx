@@ -20,8 +20,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    // Check if already seen in session
-    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    // Check if already seen (persists forever, not just session)
+    const hasSeenSplash = localStorage.getItem('hasSeenSplash');
     if (hasSeenSplash) {
       setShowSplash(false);
     }
