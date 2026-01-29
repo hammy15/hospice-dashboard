@@ -34,9 +34,10 @@ const formatPercent = (value: number | null) => {
   return `${Number(value).toFixed(1)}%`;
 };
 
-const getPenetrationColor = (pct: number) => {
-  if (pct >= 30) return 'text-red-400';
-  if (pct >= 15) return 'text-amber-400';
+const getPenetrationColor = (pct: number | string) => {
+  const num = Number(pct) || 0;
+  if (num >= 30) return 'text-red-400';
+  if (num >= 15) return 'text-amber-400';
   return 'text-emerald-400';
 };
 
@@ -71,12 +72,14 @@ export default function ConsolidationPage() {
   }
 
   const sortedStates = [...stateData].sort((a, b) => {
-    const aVal = a[sortKey];
-    const bVal = b[sortKey];
-    if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+    const aVal = Number(a[sortKey]) || 0;
+    const bVal = Number(b[sortKey]) || 0;
+    if (sortKey === 'state') {
+      return sortDir === 'desc'
+        ? String(b[sortKey]).localeCompare(String(a[sortKey]))
+        : String(a[sortKey]).localeCompare(String(b[sortKey]));
     }
-    return 0;
+    return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
   });
 
   const handleSort = (key: keyof StateConsolidation) => {
@@ -88,13 +91,13 @@ export default function ConsolidationPage() {
     }
   };
 
-  // Calculate totals
+  // Calculate totals (convert strings from DB to numbers)
   const totals = stateData.reduce(
     (acc, s) => ({
-      total: acc.total + s.total_providers,
-      pe: acc.pe + s.pe_owned,
-      chain: acc.chain + s.chain_affiliated,
-      independent: acc.independent + s.independent,
+      total: acc.total + Number(s.total_providers || 0),
+      pe: acc.pe + Number(s.pe_owned || 0),
+      chain: acc.chain + Number(s.chain_affiliated || 0),
+      independent: acc.independent + Number(s.independent || 0),
     }),
     { total: 0, pe: 0, chain: 0, independent: 0 }
   );
@@ -241,8 +244,10 @@ export default function ConsolidationPage() {
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border)]">
                   {sortedStates.map((state, index) => {
-                    const independentPct = state.total_providers > 0
-                      ? (state.independent / state.total_providers) * 100
+                    const totalProviders = Number(state.total_providers) || 0;
+                    const independent = Number(state.independent) || 0;
+                    const independentPct = totalProviders > 0
+                      ? (independent / totalProviders) * 100
                       : 0;
 
                     return (
