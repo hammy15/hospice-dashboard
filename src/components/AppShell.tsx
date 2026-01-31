@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Navigation } from './Navigation';
 import { SplashScreen } from './SplashScreen';
 import { DemoTour, useDemoTour } from './DemoTour';
-import { PhillAssistant } from './PhillAssistant';
+import { PhillAssistant, PhillProvider } from './PhillAssistant';
 
 interface DemoContextType {
   openDemo: () => void;
@@ -41,38 +41,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Prevent hydration mismatch
   if (!mounted) {
     return (
-      <DemoContext.Provider value={{ openDemo }}>
-        <div className="min-h-screen mesh-bg">
-          <Navigation />
-          <main className="pt-20 pb-12">{children}</main>
-        </div>
-      </DemoContext.Provider>
+      <PhillProvider>
+        <DemoContext.Provider value={{ openDemo }}>
+          <div className="min-h-screen mesh-bg">
+            <Navigation />
+            <main className="pt-20 pb-12">{children}</main>
+          </div>
+        </DemoContext.Provider>
+      </PhillProvider>
     );
   }
 
   return (
-    <DemoContext.Provider value={{ openDemo }}>
-      {showSplash && (
-        <SplashScreen onComplete={() => setShowSplash(false)} />
-      )}
-      <div
-        className={`min-h-screen mesh-bg transition-opacity duration-500 ${
-          showSplash ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        <Navigation />
-        <main className="pt-20 pb-12">{children}</main>
-      </div>
+    <PhillProvider>
+      <DemoContext.Provider value={{ openDemo }}>
+        {showSplash && (
+          <SplashScreen onComplete={() => setShowSplash(false)} />
+        )}
+        <div
+          className={`min-h-screen mesh-bg transition-opacity duration-500 ${
+            showSplash ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          <Navigation />
+          <main className="pt-20 pb-12">{children}</main>
+        </div>
 
-      {/* Demo Tour Modal */}
-      <DemoTour
-        isOpen={isOpen}
-        onClose={closeDemo}
-        onComplete={completeDemo}
-      />
+        {/* Demo Tour Modal */}
+        <DemoTour
+          isOpen={isOpen}
+          onClose={closeDemo}
+          onComplete={completeDemo}
+        />
 
-      {/* Phill AI Assistant */}
-      <PhillAssistant />
-    </DemoContext.Provider>
+        {/* Phill AI Assistant */}
+        <PhillAssistant />
+      </DemoContext.Provider>
+    </PhillProvider>
   );
 }

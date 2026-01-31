@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,7 +9,9 @@ import {
   TrendingUp, AlertTriangle, CheckCircle, Loader2,
   BookOpen, Calculator, Shield, Users, FileText,
   DollarSign, Building2, BarChart3, Heart, Brain,
-  Zap, Clock, Award, Percent, ArrowRight
+  Zap, Clock, Award, Percent, ArrowRight, MapPin,
+  TrendingDown, AlertCircle, ChevronRight, BadgeCheck,
+  Gauge, Info, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import FiveStarDataset, {
   queryKnowledge,
@@ -17,6 +19,70 @@ import FiveStarDataset, {
   getImprovementRecommendations,
   searchKnowledge
 } from '@/lib/knowledge';
+
+// ============================================
+// PROVIDER CONTEXT FOR PHILL
+// ============================================
+interface ProviderData {
+  ccn: string;
+  provider_name: string;
+  city: string;
+  state: string;
+  overall_score: number | null;
+  quality_score: number | null;
+  ownership_type: string | null;
+  estimated_adc: number | null;
+  // Hospice Quality Measures
+  hci_score: number | null;
+  hci_percentile: number | null;
+  hvldl_score: number | null;
+  timely_care_score: number | null;
+  beliefs_values_score: number | null;
+  communication_score: number | null;
+  training_score: number | null;
+  overall_rating_score: number | null;
+  willing_recommend_score: number | null;
+  // Classification and status
+  classification: string | null;
+  is_con_state: boolean;
+  // Additional data
+  address?: string | null;
+  phone?: string | null;
+  chain_organization?: string | null;
+  [key: string]: any;
+}
+
+interface PhillContextType {
+  provider: ProviderData | null;
+  setProvider: (provider: ProviderData | null) => void;
+}
+
+const PhillContext = createContext<PhillContextType>({
+  provider: null,
+  setProvider: () => {},
+});
+
+export function PhillProvider({ children }: { children: React.ReactNode }) {
+  const [provider, setProvider] = useState<ProviderData | null>(null);
+  return (
+    <PhillContext.Provider value={{ provider, setProvider }}>
+      {children}
+    </PhillContext.Provider>
+  );
+}
+
+export function usePhillContext() {
+  return useContext(PhillContext);
+}
+
+// Hook to update Phill context from provider pages
+export function useSetPhillProvider(provider: ProviderData | null) {
+  const { setProvider } = usePhillContext();
+  useEffect(() => {
+    setProvider(provider);
+    return () => setProvider(null);
+  }, [provider, setProvider]);
+}
 
 interface Message {
   id: string;
@@ -32,22 +98,708 @@ interface QuickAction {
 }
 
 // ============================================
-// COMPREHENSIVE KNOWLEDGE RESPONSE ENGINE
+// PROVIDER-SPECIFIC ANALYSIS ENGINE
 // ============================================
 
-function generateResponse(input: string, pathname: string): string {
+function getScoreQuality(score: number | null, benchmarks: { excellent: number; good: number; fair: number }): { level: string; color: string; description: string } {
+  if (score === null) return { level: 'Unknown', color: 'gray', description: 'No data available' };
+  if (score >= benchmarks.excellent) return { level: 'Excellent', color: 'emerald', description: 'Top performer, well above national average' };
+  if (score >= benchmarks.good) return { level: 'Good', color: 'turquoise', description: 'Above average performance' };
+  if (score >= benchmarks.fair) return { level: 'Fair', color: 'amber', description: 'Average performance, improvement opportunity' };
+  return { level: 'Needs Improvement', color: 'red', description: 'Below average, priority focus area' };
+}
+
+function generateProviderSpecificAnalysis(provider: ProviderData, query: string): string | null {
+  const lowerQuery = query.toLowerCase();
+  const name = provider.provider_name;
+  const classification = provider.classification || 'Unclassified';
+
+  // Quality score assessments
+  const hciQuality = getScoreQuality(provider.hci_score, { excellent: 85, good: 75, fair: 65 });
+  const hvldlQuality = getScoreQuality(provider.hvldl_score, { excellent: 90, good: 80, fair: 70 });
+  const commQuality = getScoreQuality(provider.communication_score, { excellent: 85, good: 78, fair: 70 });
+  const overallQuality = getScoreQuality(provider.overall_score, { excellent: 85, good: 75, fair: 60 });
+
+  // Full analysis when asking about the provider
+  if (lowerQuery.includes('analyze') || lowerQuery.includes('analysis') ||
+      lowerQuery.includes('about this') || lowerQuery.includes('this provider') ||
+      lowerQuery.includes('this hospice') || lowerQuery.includes('tell me about') ||
+      lowerQuery.includes('overview') || lowerQuery.includes('summary')) {
+
+    return `**Comprehensive Analysis: ${name}**
+
+**Location:** ${provider.city}, ${provider.state} ${provider.is_con_state ? '(CON-Protected Market)' : ''}
+**CCN:** ${provider.ccn}
+**Classification:** ${classification}
+**Ownership:** ${provider.ownership_type || 'Not specified'}
+${provider.chain_organization ? `**Chain Affiliation:** ${provider.chain_organization}` : '**Chain Affiliation:** Independent (Endemic)'}
+
+---
+
+**EXECUTIVE SUMMARY**
+
+${name} is classified as **${classification}** based on our M&A scoring methodology. ${
+  classification === 'GREEN'
+    ? 'This provider meets all quality thresholds and represents a prime acquisition candidate with minimal remediation requirements.'
+    : classification === 'YELLOW'
+    ? 'This provider shows mixed indicators requiring additional due diligence and a post-acquisition improvement plan.'
+    : 'This provider presents elevated risk and would require significant remediation post-acquisition.'
+}
+
+**Overall Score:** ${provider.overall_score !== null ? `${provider.overall_score}/100 (${overallQuality.level})` : 'Data not available'}
+
+---
+
+**QUALITY METRICS DEEP DIVE**
+
+**1. Hospice Care Index (HCI): ${provider.hci_score !== null ? `${provider.hci_score}%` : 'N/A'}** — ${hciQuality.level}
+${provider.hci_score !== null ? `
+This composite measure evaluates clinical quality across multiple dimensions:
+- Timeliness of care initiation
+- Pain assessment completion
+- Dyspnea screening
+- Bowel regimen documentation
+- Comprehensive assessment within 5 days
+
+${provider.hci_score >= 85
+  ? '✓ **Strong Performance:** HCI above 85% indicates excellent clinical protocols and documentation. This is a key quality differentiator in the market.'
+  : provider.hci_score >= 75
+  ? '◐ **Good Performance:** HCI between 75-85% shows solid clinical care. Minor improvements in documentation or protocol adherence could push this into excellence territory.'
+  : provider.hci_score >= 65
+  ? '⚠️ **Improvement Needed:** HCI below 75% suggests gaps in clinical protocols or documentation. Focus areas: assessment timeliness, symptom management documentation.'
+  : '⛔ **Priority Focus:** HCI below 65% indicates significant clinical quality concerns. Comprehensive review of care protocols, staff training, and documentation systems recommended.'
+}
+${provider.hci_percentile ? `\n**Percentile Rank:** ${provider.hci_percentile}th percentile nationally` : ''}
+` : 'No HCI data available. This may indicate a new provider or data reporting issues.'}
+
+**2. Hospice Visits in Last Days of Life (HVLDL): ${provider.hvldl_score !== null ? `${provider.hvldl_score}%` : 'N/A'}** — ${hvldlQuality.level}
+${provider.hvldl_score !== null ? `
+This critical measure tracks RN and MSW visits in the final 3 days of life:
+
+${provider.hvldl_score >= 90
+  ? '✓ **Exceptional:** Above 90% indicates strong commitment to end-of-life presence. Families highly value this, reflected in CAHPS scores.'
+  : provider.hvldl_score >= 80
+  ? '◐ **Solid:** 80-90% is above average. Consider protocols to ensure visits even on weekends/holidays for further improvement.'
+  : provider.hvldl_score >= 70
+  ? '⚠️ **Below Average:** 70-80% suggests gaps in end-of-life coverage. Implement 24/7 on-call protocols and predictive models for identifying patients approaching end-of-life.'
+  : '⛔ **Critical Gap:** Below 70% significantly impacts family experience and CAHPS scores. Immediate attention needed on staffing coverage and death imminent protocols.'
+}
+` : 'No HVLDL data available.'}
+
+**3. CAHPS Communication: ${provider.communication_score !== null ? `${provider.communication_score}%` : 'N/A'}** — ${commQuality.level}
+${provider.communication_score !== null ? `
+Family perception of communication directly impacts referral relationships and overall satisfaction:
+
+${provider.communication_score >= 85
+  ? '✓ **Excellent:** Strong communication skills across the team. This drives word-of-mouth referrals and physician trust.'
+  : provider.communication_score >= 78
+  ? '◐ **Good:** Above average communication. Consider structured family conferences and more proactive updates to reach excellence.'
+  : provider.communication_score >= 70
+  ? '⚠️ **Average:** Room for improvement. Implement communication training, set family contact frequency standards, improve care plan education.'
+  : '⛔ **Priority:** Poor communication scores significantly impact referral relationships. Comprehensive training program needed.'
+}
+` : 'No communication data available.'}
+
+**4. Overall CAHPS Rating: ${provider.overall_rating_score !== null ? `${provider.overall_rating_score}%` : 'N/A'}**
+${provider.overall_rating_score !== null ? `
+This is the "bottom line" family satisfaction metric. ${provider.overall_rating_score >= 85 ? 'Excellent performance.' : provider.overall_rating_score >= 75 ? 'Good performance.' : 'Improvement opportunity.'}
+` : ''}
+
+**5. Willingness to Recommend: ${provider.willing_recommend_score !== null ? `${provider.willing_recommend_score}%` : 'N/A'}**
+${provider.willing_recommend_score !== null ? `
+The ultimate loyalty metric. ${provider.willing_recommend_score >= 85 ? 'Strong advocacy from families.' : provider.willing_recommend_score >= 75 ? 'Good recommendation rate.' : 'Focus on service recovery and experience improvement.'}
+` : ''}
+
+---
+
+**OPERATIONAL METRICS**
+
+**Estimated Average Daily Census (ADC):** ${provider.estimated_adc !== null ? provider.estimated_adc : 'Not available'}
+${provider.estimated_adc !== null ? `
+${provider.estimated_adc >= 100
+  ? '**Large Provider:** ADC 100+ indicates significant market presence. Benefits from economies of scale, established referral networks, and operational infrastructure.'
+  : provider.estimated_adc >= 50
+  ? '**Mid-Size Provider:** ADC 50-100 represents a solid operational platform. Good balance of scale and manageability for integration.'
+  : provider.estimated_adc >= 25
+  ? '**Small-Medium Provider:** ADC 25-50 is typical for regional providers. May benefit from management support post-acquisition.'
+  : '**Small Provider:** ADC under 25 suggests limited market penetration or new operation. Higher operational risk but potentially attractive valuation.'
+}
+
+**Valuation Estimate (ADC Method):**
+- Conservative: $${((provider.estimated_adc || 0) * 25000).toLocaleString()} (ADC × $25K)
+- Mid-Range: $${((provider.estimated_adc || 0) * 35000).toLocaleString()} (ADC × $35K)
+- Premium: $${((provider.estimated_adc || 0) * 45000).toLocaleString()} (ADC × $45K)
+` : ''}
+
+---
+
+**MARKET POSITION**
+
+**State:** ${provider.state}
+${provider.is_con_state ? `
+✓ **CON-Protected Market**
+This hospice operates in a Certificate of Need state, which provides:
+- Regulatory barriers to new competitor entry
+- Protected market position
+- Premium valuation multiple (typically 15-25% above non-CON)
+- Acquisition is primary market entry strategy for buyers
+` : `
+◐ **Non-CON Market**
+Open market entry allows new competitors. Competitive dynamics driven by:
+- Quality reputation
+- Referral relationships
+- Geographic coverage
+- Payer mix optimization
+`}
+
+---
+
+**M&A IMPLICATIONS**
+
+${classification === 'GREEN' ? `
+**Investment Thesis:** ${name} is a prime acquisition candidate.
+
+**Strengths:**
+${provider.overall_score && provider.overall_score >= 75 ? '✓ Strong overall quality score' : ''}
+${provider.hci_score && provider.hci_score >= 75 ? '✓ Good clinical quality (HCI)' : ''}
+${provider.is_con_state ? '✓ CON protection provides competitive moat' : ''}
+${!provider.chain_organization ? '✓ Independent operator - potential owner carry-back' : ''}
+
+**Suggested Approach:**
+1. Initial outreach to gauge seller interest
+2. Quality data verification in due diligence
+3. Management team assessment
+4. Integration planning with minimal disruption focus
+` : classification === 'YELLOW' ? `
+**Investment Thesis:** ${name} presents a value-add opportunity with improvement potential.
+
+**Considerations:**
+- Quality metrics show room for improvement
+- Post-acquisition operational enhancement needed
+- Pricing should reflect improvement investment
+- Timeline: 6-12 months for meaningful rating improvement
+
+**Due Diligence Focus:**
+1. Root cause analysis of quality gaps
+2. Staffing stability and turnover data
+3. Survey history and deficiency patterns
+4. Management team capability
+` : `
+**Investment Thesis:** ${name} requires significant remediation and presents elevated risk.
+
+**Risk Factors:**
+- Quality metrics below acceptable thresholds
+- May have survey/compliance concerns
+- Potential for continued deterioration
+- Higher integration complexity
+
+**Recommendation:** Deep due diligence before proceeding. Consider pass unless compelling strategic rationale.
+`}
+
+---
+
+What specific aspect would you like me to elaborate on?
+- Quality improvement action plan
+- Detailed valuation analysis
+- Due diligence checklist
+- Comparison to market benchmarks`;
+  }
+
+  // Quality-specific questions
+  if (lowerQuery.includes('quality') || lowerQuery.includes('score') || lowerQuery.includes('rating') ||
+      lowerQuery.includes('measure') || lowerQuery.includes('metric')) {
+    return `**Quality Analysis: ${name}**
+
+**Overall Quality Position:** ${overallQuality.level}
+
+${provider.overall_score !== null ? `
+**Composite Score:** ${provider.overall_score}/100
+
+This score incorporates multiple quality dimensions weighted by M&A relevance:
+` : ''}
+
+**CAHPS Survey Results (Family Experience)**
+
+| Measure | Score | Assessment |
+|---------|-------|------------|
+| Overall Rating | ${provider.overall_rating_score ?? 'N/A'}% | ${provider.overall_rating_score ? (provider.overall_rating_score >= 85 ? 'Excellent' : provider.overall_rating_score >= 75 ? 'Good' : 'Needs Work') : '—'} |
+| Would Recommend | ${provider.willing_recommend_score ?? 'N/A'}% | ${provider.willing_recommend_score ? (provider.willing_recommend_score >= 85 ? 'Strong' : provider.willing_recommend_score >= 75 ? 'Good' : 'Concern') : '—'} |
+| Communication | ${provider.communication_score ?? 'N/A'}% | ${commQuality.level} |
+| Training Family | ${provider.training_score ?? 'N/A'}% | ${provider.training_score ? (provider.training_score >= 80 ? 'Good' : 'Opportunity') : '—'} |
+| Beliefs/Values | ${provider.beliefs_values_score ?? 'N/A'}% | ${provider.beliefs_values_score ? (provider.beliefs_values_score >= 85 ? 'Excellent' : 'Review') : '—'} |
+
+**Clinical Quality Measures**
+
+| Measure | Score | Assessment |
+|---------|-------|------------|
+| HCI (Composite) | ${provider.hci_score ?? 'N/A'}% | ${hciQuality.level} |
+| HVLDL | ${provider.hvldl_score ?? 'N/A'}% | ${hvldlQuality.level} |
+| Timely Care | ${provider.timely_care_score ?? 'N/A'}% | ${provider.timely_care_score ? (provider.timely_care_score >= 80 ? 'Good' : 'Review') : '—'} |
+
+**Key Observations:**
+${provider.hci_score !== null && provider.hci_score < 75 ? '⚠️ HCI below 75% indicates clinical documentation or protocol gaps\n' : ''}${provider.hvldl_score !== null && provider.hvldl_score < 80 ? '⚠️ HVLDL below 80% suggests end-of-life coverage issues\n' : ''}${provider.communication_score !== null && provider.communication_score < 78 ? '⚠️ Communication scores below average affect referral relationships\n' : ''}${provider.overall_score !== null && provider.overall_score >= 80 ? '✓ Overall strong quality profile\n' : ''}
+
+**Improvement Priority:**
+${provider.hci_score !== null && provider.communication_score !== null && provider.hci_score < provider.communication_score ?
+  '1. Focus on clinical quality (HCI) first - biggest impact on overall rating' :
+  '1. Focus on family experience (CAHPS) - drives referrals'
+}
+
+Would you like specific action plans for any of these measures?`;
+  }
+
+  // Valuation questions
+  if (lowerQuery.includes('value') || lowerQuery.includes('worth') || lowerQuery.includes('valuation') ||
+      lowerQuery.includes('price') || lowerQuery.includes('multiple') || lowerQuery.includes('buy')) {
+    const adc = provider.estimated_adc || 0;
+    const qualityMultiplier = (provider.overall_score || 50) >= 80 ? 1.2 : (provider.overall_score || 50) >= 65 ? 1.0 : 0.85;
+    const conMultiplier = provider.is_con_state ? 1.15 : 1.0;
+
+    return `**Valuation Analysis: ${name}**
+
+**Key Value Drivers**
+
+1. **Average Daily Census (ADC):** ${adc > 0 ? adc : 'Unknown'}
+   ${adc > 0 ? `- Annual Patient Days: ~${(adc * 365).toLocaleString()}` : ''}
+   ${adc > 0 ? `- Estimated Annual Revenue: $${((adc * 365 * 185 * 0.85)).toLocaleString()} (assuming $185/day, 85% Medicare)` : ''}
+
+2. **Quality Score:** ${provider.overall_score || 'N/A'}
+   - Quality Premium/Discount: ${qualityMultiplier >= 1.1 ? '+20% (Premium)' : qualityMultiplier >= 1.0 ? 'Market rate' : '-15% (Discount)'}
+
+3. **Market Position:** ${provider.state}
+   - CON Protection: ${provider.is_con_state ? 'Yes (+15% premium)' : 'No (market rate)'}
+   - Ownership: ${provider.chain_organization ? 'Chain-affiliated' : 'Independent'}
+
+---
+
+**VALUATION METHODOLOGIES**
+
+**Method 1: Per-ADC Valuation**
+${adc > 0 ? `
+| Scenario | Per-ADC | Value |
+|----------|---------|-------|
+| Conservative | $25,000 | $${(adc * 25000).toLocaleString()} |
+| Market Rate | $35,000 | $${(adc * 35000).toLocaleString()} |
+| Premium | $45,000 | $${(adc * 45000).toLocaleString()} |
+
+**Adjusted for Quality & Market:**
+- Base (Market): $${(adc * 35000).toLocaleString()}
+- Quality Adjustment: ${qualityMultiplier >= 1.1 ? '+20%' : qualityMultiplier >= 1.0 ? '+0%' : '-15%'}
+- CON Adjustment: ${provider.is_con_state ? '+15%' : '+0%'}
+- **Indicated Value: $${Math.round(adc * 35000 * qualityMultiplier * conMultiplier).toLocaleString()}**
+` : 'ADC data required for this analysis'}
+
+**Method 2: Revenue Multiple**
+${adc > 0 ? `
+Estimated Annual Revenue: $${((adc * 365 * 185 * 0.85)).toLocaleString()}
+| Multiple | Value |
+|----------|-------|
+| 0.8x | $${Math.round(adc * 365 * 185 * 0.85 * 0.8).toLocaleString()} |
+| 1.0x | $${Math.round(adc * 365 * 185 * 0.85 * 1.0).toLocaleString()} |
+| 1.2x | $${Math.round(adc * 365 * 185 * 0.85 * 1.2).toLocaleString()} |
+` : 'Revenue data required for this analysis'}
+
+**Method 3: EBITDA Multiple**
+Assuming 15-18% EBITDA margin on revenue:
+${adc > 0 ? `
+- Estimated EBITDA: $${Math.round(adc * 365 * 185 * 0.85 * 0.16).toLocaleString()}
+- At 4.0x: $${Math.round(adc * 365 * 185 * 0.85 * 0.16 * 4).toLocaleString()}
+- At 5.0x: $${Math.round(adc * 365 * 185 * 0.85 * 0.16 * 5).toLocaleString()}
+` : 'Financial data required'}
+
+---
+
+**VALUATION CONSIDERATIONS**
+
+${classification === 'GREEN' ? `
+✓ **Premium Candidate**
+- Strong quality metrics support premium valuation
+- Lower integration risk
+- Immediate accretive potential
+` : classification === 'YELLOW' ? `
+◐ **Value-Add Opportunity**
+- Quality improvement potential adds value
+- Factor in improvement investment ($50-150K typically)
+- Timeline: 6-12 months to see rating improvement
+` : `
+⚠️ **Discount Required**
+- Quality concerns require remediation
+- Factor in turnaround costs and timeline
+- Higher execution risk
+`}
+
+**Negotiation Considerations:**
+- ${provider.chain_organization ? 'Chain sale process likely more formal' : 'Independent owner may offer more flexibility (owner carry-back potential)'}
+- ${provider.is_con_state ? 'CON certificate is key asset - verify transferability' : 'Non-CON market means easier competitor entry'}
+
+Would you like a detailed term sheet framework for this acquisition?`;
+  }
+
+  // Improvement questions
+  if (lowerQuery.includes('improve') || lowerQuery.includes('better') || lowerQuery.includes('action') ||
+      lowerQuery.includes('strategy') || lowerQuery.includes('plan') || lowerQuery.includes('fix')) {
+
+    // Find the weakest areas
+    const metrics = [
+      { name: 'HCI', score: provider.hci_score, target: 85 },
+      { name: 'HVLDL', score: provider.hvldl_score, target: 90 },
+      { name: 'Communication', score: provider.communication_score, target: 85 },
+      { name: 'Overall Rating', score: provider.overall_rating_score, target: 85 },
+      { name: 'Recommend', score: provider.willing_recommend_score, target: 85 },
+    ].filter(m => m.score !== null).sort((a, b) => (a.score || 0) - (b.score || 0));
+
+    const weakest = metrics[0];
+    const second = metrics[1];
+
+    return `**Improvement Action Plan: ${name}**
+
+**Current Classification:** ${classification}
+**Target:** ${classification === 'GREEN' ? 'Maintain excellence' : classification === 'YELLOW' ? 'Move to GREEN' : 'Rapid quality improvement'}
+
+---
+
+**PRIORITY IMPROVEMENT AREAS**
+
+Based on ${name}'s current metrics, here are the prioritized improvement opportunities:
+
+${weakest ? `
+**#1 Priority: ${weakest.name}**
+Current: ${weakest.score}% | Target: ${weakest.target}% | Gap: ${weakest.target - (weakest.score || 0)} points
+
+${weakest.name === 'HCI' ? `
+**Hospice Care Index Action Plan:**
+
+1. **Timeliness of Care (30 days)**
+   - Implement same-day admission visits
+   - Create admission readiness checklists
+   - Pre-schedule comprehensive assessments
+   - Track time-to-first-visit metric daily
+
+2. **Pain Assessment (30 days)**
+   - Standardize pain assessment tool usage
+   - Train all staff on pain scales
+   - Implement PRN documentation reminders
+   - Audit 100% of charts monthly
+
+3. **Dyspnea Screening (30 days)**
+   - Add dyspnea to admission checklist
+   - Create standing orders for dyspnea management
+   - Train on breathlessness assessment tools
+
+4. **Comprehensive Assessment (60 days)**
+   - Calendar comprehensive assessments
+   - Supervisor review within 24 hours
+   - Create assessment completion dashboards
+   - Weekly compliance reports
+
+5. **Documentation Excellence (Ongoing)**
+   - EHR template optimization
+   - Real-time documentation (at bedside)
+   - Quality assurance review process
+   - Peer chart audits monthly
+
+**Expected Outcome:** 10-15 point improvement in 90 days
+` : weakest.name === 'HVLDL' ? `
+**Hospice Visits in Last Days of Life Action Plan:**
+
+1. **Predictive Identification (Immediate)**
+   - Train staff on death-imminent indicators
+   - Daily census review for active phase patients
+   - Create "imminent" flags in EHR
+   - Twice-daily care coordinator huddles
+
+2. **Coverage Protocol (30 days)**
+   - 24/7 on-call RN availability
+   - Weekend/holiday visit schedules
+   - Per-diem pool for surge coverage
+   - Backup staff call lists
+
+3. **Visit Scheduling (30 days)**
+   - Auto-schedule daily visits for imminent patients
+   - Minimum 2 visits/day in last 3 days
+   - MSW visit in final 72 hours
+   - Chaplain engagement protocol
+
+4. **Family Communication (30 days)**
+   - Proactive "what to expect" conversations
+   - Daily family updates protocol
+   - After-hours family callback system
+
+5. **Monitoring (Ongoing)**
+   - Weekly HVLDL metric tracking
+   - Post-death chart review
+   - Staff feedback and coaching
+
+**Expected Outcome:** 15-20 point improvement in 60 days
+` : `
+**${weakest.name} Improvement Plan:**
+
+1. **Assessment (Week 1-2)**
+   - Root cause analysis of current gaps
+   - Staff surveys on barriers
+   - Process mapping current workflows
+
+2. **Quick Wins (Week 2-4)**
+   - Training on communication best practices
+   - Family engagement protocols
+   - Feedback loop implementation
+
+3. **Sustained Improvement (Month 2-3)**
+   - Regular performance monitoring
+   - Coaching and recognition programs
+   - Process refinement based on data
+
+**Expected Outcome:** 8-12 point improvement in 90 days
+`}
+` : 'No metrics available for prioritization'}
+
+${second ? `
+**#2 Priority: ${second.name}**
+Current: ${second.score}% | Target: ${second.target}% | Gap: ${second.target - (second.score || 0)} points
+
+This should be addressed after initial progress on Priority #1.
+` : ''}
+
+---
+
+**IMPLEMENTATION TIMELINE**
+
+| Phase | Timeline | Focus | Expected Impact |
+|-------|----------|-------|-----------------|
+| Stabilize | Weeks 1-4 | Quick wins, stop deterioration | Prevent further decline |
+| Improve | Months 2-3 | Systematic improvements | 10-15 point gains |
+| Sustain | Months 4-6 | Lock in gains, culture change | Rating improvement |
+| Excel | Months 6-12 | Best-in-class operations | GREEN classification |
+
+---
+
+**INVESTMENT REQUIRED**
+
+- **Training:** $5,000-15,000 (staff education)
+- **Technology:** $10,000-25,000 (EHR optimization, dashboards)
+- **Staffing:** $25,000-75,000/year (coverage improvements)
+- **Consulting:** $15,000-40,000 (QI expertise)
+
+**Total Year 1:** $55,000-155,000
+**ROI:** 3-5x through improved referrals, reduced compliance risk
+
+---
+
+Would you like detailed protocols for any specific improvement area?`;
+  }
+
+  // Due diligence questions
+  if (lowerQuery.includes('due diligence') || lowerQuery.includes('diligence') || lowerQuery.includes('investigate') ||
+      lowerQuery.includes('research') || lowerQuery.includes('checklist')) {
+    return `**Due Diligence Checklist: ${name}**
+
+**Provider:** ${name}
+**Location:** ${provider.city}, ${provider.state}
+**CCN:** ${provider.ccn}
+
+---
+
+**1. QUALITY & CLINICAL (Critical)**
+
+☐ **CMS Quality Measure History (3 years)**
+  - Current HCI: ${provider.hci_score ?? 'Request'}%
+  - Current HVLDL: ${provider.hvldl_score ?? 'Request'}%
+  - Trend analysis: improving/stable/declining
+
+☐ **CAHPS Survey Results (3 years)**
+  - Overall Rating: ${provider.overall_rating_score ?? 'Request'}%
+  - Recommend: ${provider.willing_recommend_score ?? 'Request'}%
+  - Communication: ${provider.communication_score ?? 'Request'}%
+
+☐ **Survey History**
+  - Last state survey date
+  - Deficiency count and severity
+  - Plans of correction status
+  - Any enforcement actions
+
+☐ **Complaint Investigations**
+  - Substantiated complaints (2 years)
+  - Patterns or repeat issues
+  - Resolution documentation
+
+---
+
+**2. OPERATIONAL**
+
+☐ **Census Data**
+  - Estimated ADC: ${provider.estimated_adc ?? 'Request'}
+  - ADC trend (3 years)
+  - Seasonality patterns
+  - Payer mix breakdown
+
+☐ **Staffing**
+  - Current staffing levels by discipline
+  - Turnover rates (RN, aide)
+  - Vacancy rates
+  - Contractor utilization
+
+☐ **Service Area**
+  - Counties/ZIP codes served
+  - Drive time mapping
+  - Competitor analysis
+  - Referral source geography
+
+---
+
+**3. FINANCIAL**
+
+☐ **Revenue Analysis**
+  - 3 years financial statements
+  - Revenue per patient day
+  - Payer mix trends
+  - Medicare cap liability history
+
+☐ **Cost Structure**
+  - Labor cost ratios
+  - G&A as % of revenue
+  - Technology/infrastructure costs
+  - Marketing spend
+
+☐ **Profitability**
+  - EBITDA margins
+  - Adjusted EBITDA (owner normalization)
+  - Working capital needs
+  - CapEx requirements
+
+---
+
+**4. COMPLIANCE & LEGAL**
+
+☐ **Regulatory Status**
+  - Medicare certification current
+  - State license current
+  ${provider.is_con_state ? '- CON certificate review and transferability' : ''}
+  - Accreditation status (if applicable)
+
+☐ **Legal Review**
+  - Pending litigation
+  - OIG exclusion list check (all employees)
+  - Previous settlements or fines
+  - Billing compliance review
+
+☐ **Corporate Structure**
+  - Entity formation documents
+  - Operating agreements
+  - Management contracts
+  - Related party transactions
+
+---
+
+**5. HUMAN CAPITAL**
+
+☐ **Key Personnel**
+  - Administrator credentials
+  - Medical Director qualifications
+  - Clinical Director experience
+  - Key staff retention risk
+
+☐ **Employment Matters**
+  - Employee count by classification
+  - Wage/benefit analysis
+  - Union status
+  - Non-compete agreements
+
+---
+
+**6. STRATEGIC**
+
+☐ **Market Position**
+  - Market share estimate
+  - Competitive differentiation
+  - Referral relationships
+  - Brand/reputation assessment
+
+☐ **Growth Potential**
+  - Expansion opportunities
+  - New county/market potential
+  - Service line additions
+  - Synergy identification
+
+---
+
+**RED FLAGS TO WATCH FOR:**
+
+${provider.overall_score !== null && provider.overall_score < 60 ? '⚠️ Low quality scores may indicate systemic issues\n' : ''}${provider.hci_score !== null && provider.hci_score < 65 ? '⚠️ HCI below 65% suggests clinical protocol gaps\n' : ''}${!provider.chain_organization ? '' : '⚠️ Chain affiliation may mean less deal flexibility\n'}• Declining ADC trend
+• High staff turnover (>50% annual)
+• Recent enforcement actions
+• Pending litigation
+• Medicare cap overpayment history
+• Owner unwilling to provide data
+
+---
+
+Would you like me to elaborate on any section?`;
+  }
+
+  // Comparison/benchmark questions
+  if (lowerQuery.includes('compare') || lowerQuery.includes('benchmark') || lowerQuery.includes('vs') ||
+      lowerQuery.includes('how does') || lowerQuery.includes('stack up')) {
+    return `**Benchmark Analysis: ${name}**
+
+**Quality Score Benchmarking**
+
+| Metric | ${name} | National Avg | Top 10% | Assessment |
+|--------|---------|--------------|---------|------------|
+| HCI | ${provider.hci_score ?? 'N/A'}% | 78% | 92%+ | ${provider.hci_score ? (provider.hci_score >= 92 ? 'Top 10%' : provider.hci_score >= 78 ? 'Above Avg' : 'Below Avg') : '—'} |
+| HVLDL | ${provider.hvldl_score ?? 'N/A'}% | 82% | 95%+ | ${provider.hvldl_score ? (provider.hvldl_score >= 95 ? 'Top 10%' : provider.hvldl_score >= 82 ? 'Above Avg' : 'Below Avg') : '—'} |
+| Communication | ${provider.communication_score ?? 'N/A'}% | 79% | 88%+ | ${provider.communication_score ? (provider.communication_score >= 88 ? 'Top 10%' : provider.communication_score >= 79 ? 'Above Avg' : 'Below Avg') : '—'} |
+| Overall Rating | ${provider.overall_rating_score ?? 'N/A'}% | 80% | 90%+ | ${provider.overall_rating_score ? (provider.overall_rating_score >= 90 ? 'Top 10%' : provider.overall_rating_score >= 80 ? 'Above Avg' : 'Below Avg') : '—'} |
+| Recommend | ${provider.willing_recommend_score ?? 'N/A'}% | 83% | 92%+ | ${provider.willing_recommend_score ? (provider.willing_recommend_score >= 92 ? 'Top 10%' : provider.willing_recommend_score >= 83 ? 'Above Avg' : 'Below Avg') : '—'} |
+
+**Market Position: ${provider.state}**
+
+- CON State: ${provider.is_con_state ? 'Yes (protected market)' : 'No (open market)'}
+- Estimated ADC: ${provider.estimated_adc ?? 'Unknown'} ${provider.estimated_adc ? (provider.estimated_adc >= 75 ? '(Large)' : provider.estimated_adc >= 35 ? '(Mid-size)' : '(Small)') : ''}
+- Classification: ${classification}
+
+**Competitive Context:**
+${provider.overall_score !== null ? `
+With an overall score of ${provider.overall_score}, ${name} is positioned ${
+  provider.overall_score >= 80 ? 'as a quality leader in the market' :
+  provider.overall_score >= 65 ? 'competitively with opportunity for differentiation' :
+  'below market leaders, requiring improvement to compete effectively'
+}.
+` : 'Quality data needed for competitive positioning.'}
+
+**Strategic Implications:**
+${classification === 'GREEN' ?
+  '✓ Premium positioning supports strong valuation and easier integration' :
+  classification === 'YELLOW' ?
+  '◐ Middle-tier positioning requires improvement plan for competitive strength' :
+  '⚠️ Below-market quality requires significant investment to compete'
+}
+
+Would you like a detailed competitive analysis for the ${provider.state} market?`;
+  }
+
+  return null;
+}
+
+// ============================================
+// GENERAL KNOWLEDGE RESPONSE ENGINE
+// ============================================
+
+function generateGeneralResponse(input: string, pathname: string, provider: ProviderData | null): string {
   const lowerInput = input.toLowerCase();
-  const words = lowerInput.split(/\s+/);
+
+  // If we have provider context and they ask a general question, contextualize it
+  if (provider && (pathname.startsWith('/provider/') || lowerInput.includes('this'))) {
+    const specificResponse = generateProviderSpecificAnalysis(provider, input);
+    if (specificResponse) return specificResponse;
+  }
 
   // ============================================
   // HEALTH INSPECTIONS DOMAIN
   // ============================================
   if (lowerInput.includes('health inspection') || lowerInput.includes('survey') ||
-      lowerInput.includes('deficien') || lowerInput.includes('citation') ||
-      lowerInput.includes('casper') || lowerInput.includes('complaint')) {
+      lowerInput.includes('deficien') || lowerInput.includes('citation')) {
     const domain = FiveStarDataset.Domains.HealthInspections;
 
-    // Deficiency scoring details
     if (lowerInput.includes('scor') || lowerInput.includes('point') || lowerInput.includes('how')) {
       return `**Health Inspection Deficiency Scoring**
 
@@ -69,1032 +821,275 @@ ${domain.CalculationSteps[0].Examples?.slice(0, 6).map(e => `- Level **${e.Level
 **Important Multipliers:**
 - ${domain.CalculationSteps[0].AbuseMultiplier}
 - Repeat deficiencies add 50% extra points
-- Substantiated complaints count at full weight
 
-**Cycle Weighting Formula:**
-\`Total = (Cycle1 × 0.6) + (Cycle2 × 0.3) + (Cycle3 × 0.1)\`
-
-Would you like strategies to reduce deficiency points?`;
+${provider ? `\n**For ${provider.provider_name}:** Check survey history in due diligence.` : ''}`;
     }
 
-    return `**Health Inspections Domain** (Foundation of Overall Rating)
-
-**Data Source:** ${domain.DataSource}
+    return `**Health Inspections Domain**
 
 ${domain.Description}
 
-**Star Cut Points (Current):**
-${domain.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points - ${s.Description}`).join('\n')}
-
-**Calculation Process:**
-${domain.CalculationSteps.map((step, i) => `${i + 1}. **${step.Name}**: ${step.Details}`).join('\n')}
+**Star Cut Points:**
+${domain.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points`).join('\n')}
 
 **Key Facts:**
-- Annual surveys + complaint investigations + infection control surveys
+- Annual surveys + complaint investigations
 - 3-year weighted average (60%/30%/10%)
-- Abuse citations double the point value
-- Top 10% = 5 stars, Bottom 10% = 1 star
-
-**Quick Win:** Mock surveys identify citation-prone areas before state visits.
-
-Ask about specific deficiency types or reduction strategies!`;
+- Abuse citations double the point value`;
   }
 
   // ============================================
-  // STAFFING DOMAIN - COMPREHENSIVE
+  // STAFFING DOMAIN
   // ============================================
   if (lowerInput.includes('staff') || lowerInput.includes('hprd') || lowerInput.includes('nurse') ||
-      lowerInput.includes('rn hour') || lowerInput.includes('pbj') || lowerInput.includes('payroll')) {
+      lowerInput.includes('pbj') || lowerInput.includes('payroll')) {
     const domain = FiveStarDataset.Domains.Staffing;
 
-    // Weekend staffing specific
     if (lowerInput.includes('weekend')) {
       return `**Weekend Staffing Requirements (2023+)**
 
-Starting in 2023, CMS added weekend staffing to the rating:
+Starting in 2023, CMS requires weekend RN coverage for 4+ star ratings.
 
-**New Rule:**
-${domain.Post2023Rules[0]}
-
-**Why This Matters:**
-- Many facilities reduced weekend RN coverage
-- CMS found correlation with worse outcomes
-- Now required for 4+ star ratings
+**Requirement:** ${domain.Post2023Rules[0]}
 
 **Strategy:**
 1. Ensure at least 1 RN on duty every weekend day
 2. Document weekend hours in PBJ accurately
-3. Consider per-diem RN pools for coverage
+3. Per-diem RN pools for coverage
 
-**Impact:** Facilities with zero weekend RN hours are capped at 3 stars overall.`;
+**Impact:** Facilities with zero weekend RN hours capped at 3 stars.`;
     }
 
-    // Turnover specific
     if (lowerInput.includes('turnover')) {
-      return `**Staff Turnover Metrics (Added 2023)**
+      return `**Staff Turnover Metrics (2023+)**
 
-CMS now tracks and penalizes high turnover:
+**New Rule:** ${domain.Post2023Rules[1]}
 
-**New Rule:**
-${domain.Post2023Rules[1]}
-
-**Turnover Calculation:**
-- Annual RN turnover rate
-- Annual total nurse turnover rate
-- Aide turnover rate
-
-**Impact:**
+**Turnover Thresholds:**
 - >60% annual turnover = potential 1-star deduction
-- Data comes from PBJ submissions
-- Retention now directly affects ratings
-
-**Strategies to Reduce Turnover:**
-1. Competitive wages (market analysis)
-2. Flexible scheduling
-3. Recognition programs
-4. Career advancement paths
-5. Better nurse-to-patient ratios
-6. Supportive management culture
-
-**ROI:** Every percentage point reduction in turnover saves ~$4,000-$5,000 per nurse per year.`;
-    }
-
-    return `**Staffing Domain** (Critical for Star Rating)
-
-**Data Source:** ${domain.DataSource}
-
-**Key Metrics Tracked:**
-${domain.Metrics.map(m => `- ${m}`).join('\n')}
-
-**HPRD Calculation:**
-\`${domain.Formula}\`
-
-**Case-Mix Adjustment:** ${domain.CaseMixAdjustment}
-
-**Star Thresholds:**
-${domain.StarThresholds.map(s => `- **${s.Stars} Stars**: RN Points ${s.RNPoints}, Total Points ${s.TotalPoints}`).join('\n')}
-
-**2023 Rule Changes (Important!):**
-${domain.Post2023Rules.map(r => `⚠️ ${r}`).join('\n')}
-
-**Practical Targets:**
-- RN: 0.75+ HPRD for 5 stars
-- Total: 4.10+ HPRD for 5 stars
-- Weekend RN coverage: Required for 4+ stars
-- Turnover: Keep below 60% annual
-
-**Quick Win:** PBJ audit to ensure all hours are captured correctly (many facilities under-report).`;
-  }
-
-  // ============================================
-  // QUALITY MEASURES - INDIVIDUAL MEASURES
-  // ============================================
-
-  // Falls (Long-Stay and Short-Stay)
-  if (lowerInput.includes('fall')) {
-    const longStayMeasure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Falls'));
-    const shortStayMeasure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Falls'));
-    const actions = getActionPlan('falls');
-
-    return `**Falls with Major Injury** - THE HIGHEST IMPACT MEASURE
-
-This is the **most heavily weighted** quality measure. Improving falls can have the biggest impact on your QM star rating.
-
-**Long-Stay Measure:**
-- **Weight:** ${longStayMeasure?.Weight} (HIGHEST)
-- **National Average:** ${longStayMeasure?.NationalAverage}
-- **5 Stars:** ${longStayMeasure?.Thresholds.FiveStar}
-- **4 Stars:** ${longStayMeasure?.Thresholds.FourStar}
-- **3 Stars:** ${longStayMeasure?.Thresholds.ThreeStar}
-- **2 Stars:** ${longStayMeasure?.Thresholds.TwoStar}
-- **1 Star:** ${longStayMeasure?.Thresholds.OneStar}
-
-**Short-Stay Measure:**
-- **Weight:** ${shortStayMeasure?.Weight}
-- **National Average:** ${shortStayMeasure?.NationalAverage}
-- **5 Stars:** ${shortStayMeasure?.Thresholds.FiveStar}
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Quick Wins (Free/Low-Cost):**
-✓ Hourly rounding protocols
-✓ Medication reviews (sedatives, blood pressure meds)
-✓ Non-slip footwear requirements
-✓ Low beds for high-risk residents
-✓ Bed/chair alarms
-✓ Clear pathways (remove clutter)
-
-**ROI:** Reducing falls by 1% can improve QM rating by 0.3-0.5 stars.`;
-  }
-
-  // Pressure Ulcers
-  if (lowerInput.includes('pressure') || lowerInput.includes('ulcer') || lowerInput.includes('wound') ||
-      lowerInput.includes('skin') || lowerInput.includes('bedsore')) {
-    const longStayMeasure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Pressure'));
-    const shortStayMeasure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Pressure'));
-    const actions = getActionPlan('pressure');
-
-    return `**Pressure Ulcers** - HIGH IMPACT MEASURE
-
-**Long-Stay (High Risk Residents):**
-- **Weight:** ${longStayMeasure?.Weight}
-- **National Average:** ${longStayMeasure?.NationalAverage}
-- **Formula:** ${longStayMeasure?.Formula}
-- **5 Stars:** ${longStayMeasure?.Thresholds.FiveStar}
-- **4 Stars:** ${longStayMeasure?.Thresholds.FourStar}
-- **3 Stars:** ${longStayMeasure?.Thresholds.ThreeStar}
-- **1 Star:** ${longStayMeasure?.Thresholds.OneStar}
-
-**Short-Stay (New or Worsened):**
-- **Weight:** ${shortStayMeasure?.Weight}
-- **National Average:** ${shortStayMeasure?.NationalAverage}
-- **5 Stars:** ${shortStayMeasure?.Thresholds.FiveStar}
-- Risk-adjusted: Yes
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Prevention Protocol:**
-1. **Repositioning** - Every 2 hours (document it!)
-2. **Surfaces** - Pressure-redistributing mattresses
-3. **Nutrition** - Protein, vitamin C, zinc optimization
-4. **Moisture** - Manage incontinence promptly
-5. **Assessment** - Daily skin checks, Braden Scale
-6. **Documentation** - Photo at admission (establishes baseline)
-
-**Key Insight:** Many pressure ulcers are "acquired" at admission but not documented. Photo documentation protects your rates.`;
-  }
-
-  // UTI
-  if (lowerInput.includes('uti') || lowerInput.includes('urinary tract') ||
-      (lowerInput.includes('urinary') && lowerInput.includes('infection'))) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('UTI'));
-    const actions = getActionPlan('uti');
-
-    return `**Urinary Tract Infections (UTI)** - HIGH IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **Impact:** HIGH
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Prevention Strategies:**
-1. **Minimize catheter use** - Single biggest impact
-2. **Remove catheters ASAP** - Daily assessment for removal
-3. **Catheter care protocols** - Proper insertion and maintenance
-4. **Hydration tracking** - Adequate fluids prevent UTIs
-5. **Perineal care** - Proper hygiene protocols
-
-**Key Insight:** Catheter-associated UTIs (CAUTIs) are the most common. Reducing catheter days is the fastest path to improvement.`;
-  }
-
-  // Catheter (separate from UTI)
-  if (lowerInput.includes('catheter') && !lowerInput.includes('infection') && !lowerInput.includes('uti')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Catheter'));
-    const actions = getActionPlan('catheter');
-
-    return `**Catheter Use** - MEDIUM IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Removal Protocol:**
-1. Daily catheter necessity review
-2. Nurse-driven removal protocol
-3. Bladder training programs
-4. Intermittent catheterization option
-5. Condom catheters for appropriate patients
-
-**Quick Win:** Many catheters remain in place due to inertia, not medical necessity. Implement daily "catheter necessity" rounds.`;
-  }
-
-  // Antipsychotics
-  if (lowerInput.includes('antipsychotic') || lowerInput.includes('psych') ||
-      lowerInput.includes('behavior') || lowerInput.includes('dementia')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Antipsychotic'));
-    const actions = getActionPlan('antipsychotic');
-
-    return `**Antipsychotic Medication Use** - MEDIUM IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Note:** ${measure?.Notes}
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Non-Pharmacological Alternatives:**
-✓ Person-centered dementia care
-✓ Environmental modifications (calm spaces)
-✓ Activity programming (music, art therapy)
-✓ Pain management (behaviors often indicate pain)
-✓ Sleep hygiene improvements
-✓ Staff training on redirection techniques
-
-**Gradual Dose Reduction (GDR):**
-- Required by CMS for ongoing antipsychotic use
-- Try reduction every 6 months unless contraindicated
-- Document medical necessity if continued`;
-  }
-
-  // Restraints
-  if (lowerInput.includes('restraint')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Restraint'));
-    const actions = getActionPlan('restraint');
-
-    return `**Physical Restraints** - MEDIUM IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Action Plan:**
-${actions.map(a => a).join('\n')}
-
-**Restraint-Free Alternatives:**
-✓ Low beds with floor mats
-✓ Motion sensors and alarms
-✓ Increased supervision/rounding
-✓ 1:1 observation when needed
-✓ Environmental modifications
-✓ Address root causes (pain, delirium)
-
-**Key Insight:** Most restraint use can be eliminated with proper alternatives. CMS targets restraint-free care.`;
-  }
-
-  // Depression
-  if (lowerInput.includes('depress') || lowerInput.includes('mood') || lowerInput.includes('mental health')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Depress'));
-
-    return `**Depressive Symptoms** - MEDIUM IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Detection:**
-- PHQ-9 screening on admission
-- Quarterly rescreening
-- Staff trained to recognize signs
-
-**Treatment Strategies:**
-✓ Meaningful activity programs
-✓ Social engagement opportunities
-✓ Natural light exposure
-✓ Exercise programs
-✓ Psychiatric consultation
-✓ Medication review (some meds cause depression)
-✓ Family involvement
-
-**Key Insight:** Depression is under-recognized in SNFs. Better screening often reveals higher rates initially, but enables treatment.`;
-  }
-
-  // ADL Decline
-  if (lowerInput.includes('adl') || lowerInput.includes('function') || lowerInput.includes('self-care') ||
-      lowerInput.includes('decline') || lowerInput.includes('mobility')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('ADL'));
-
-    return `**ADL Decline (Self-Care)** - MEDIUM IMPACT MEASURE
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Prevention Strategies:**
-✓ Restorative nursing programs
-✓ Physical therapy referrals
-✓ Occupational therapy for ADLs
-✓ Avoid "doing for" residents
-✓ Adaptive equipment provision
-✓ Ambulation programs
-
-**Key Insight:** Maintaining function requires active effort. Without intervention, decline is the default trajectory.`;
-  }
-
-  // Rehospitalization
-  if (lowerInput.includes('rehospital') || lowerInput.includes('readmission') ||
-      lowerInput.includes('hospital') || lowerInput.includes('transfer')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Rehospital'));
-
-    return `**Rehospitalizations** - SHORT-STAY MEASURE (HIGH IMPACT)
-
-- **Weight:** ${measure?.Weight}
-- **National Average:** ${measure?.NationalAverage}
-- **Formula:** ${measure?.Formula}
-- **Risk Adjusted:** Yes
-
-**Star Thresholds:**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
+- Data from PBJ submissions
 
 **Reduction Strategies:**
-1. **INTERACT Program** - Interventions to Reduce Acute Care Transfers
-2. Thorough admission assessments
-3. Medication reconciliation
-4. Early warning sign recognition
-5. On-site physician/NP coverage
-6. Family education on expectations
+1. Competitive wages
+2. Flexible scheduling
+3. Recognition programs
+4. Career advancement
+5. Better ratios
+6. Supportive management`;
+    }
 
-**Key Programs:**
-- INTERACT: evidence-based toolkit to reduce transfers
-- Hospital partnerships for warm handoffs
-- Telehealth for after-hours consultations
+    return `**Staffing Domain**
 
-**ROI:** Each avoided hospitalization saves $15,000-$25,000 and improves your measure.`;
-  }
+**Metrics:**
+${domain.Metrics.map(m => `- ${m}`).join('\n')}
 
-  // Functional Improvement (Short-Stay)
-  if (lowerInput.includes('improvement') && (lowerInput.includes('function') || lowerInput.includes('rehab'))) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Functional'));
+**Formula:** \`${domain.Formula}\`
 
-    return `**Functional Improvement** - SHORT-STAY MEASURE (HIGHER IS BETTER)
+**Star Thresholds:**
+${domain.StarThresholds.map(s => `- **${s.Stars} Stars**: RN ${s.RNPoints}pts, Total ${s.TotalPoints}pts`).join('\n')}
 
-- **Weight:** ${measure?.Weight}
-- **Impact:** HIGH
-- **National Average:** ${measure?.NationalAverage}
-- **Risk Adjusted:** Yes
-
-**Star Thresholds (Higher is Better!):**
-- **5 Stars:** ${measure?.Thresholds.FiveStar}
-- **4 Stars:** ${measure?.Thresholds.FourStar}
-- **3 Stars:** ${measure?.Thresholds.ThreeStar}
-- **2 Stars:** ${measure?.Thresholds.TwoStar}
-- **1 Star:** ${measure?.Thresholds.OneStar}
-
-**Improvement Strategies:**
-✓ Intensive therapy programs
-✓ Individualized rehab goals
-✓ Motivational interviewing
-✓ Family involvement in therapy
-✓ Restorative nursing carry-over
-✓ Proper equipment provision
-
-**Key Insight:** This is one of the few "higher is better" measures. Strong therapy programs directly improve this metric.`;
+**2023 Changes:**
+${domain.Post2023Rules.map(r => `⚠️ ${r}`).join('\n')}`;
   }
 
   // ============================================
-  // QUALITY MEASURES OVERVIEW
+  // QUALITY MEASURES
   // ============================================
   if (lowerInput.includes('quality measure') || lowerInput.includes('qm') ||
-      (lowerInput.includes('measure') && lowerInput.includes('list')) ||
-      lowerInput.includes('28 measure') || lowerInput.includes('all measure')) {
-    const qm = FiveStarDataset.Domains.QualityMeasures;
+      lowerInput.includes('hci') || lowerInput.includes('hospice care index') ||
+      lowerInput.includes('hvldl') || lowerInput.includes('cahps')) {
+    return `**Hospice Quality Measures**
 
-    return `**CMS Quality Measures Overview**
+**Core Measures:**
 
-There are **${qm.TotalMeasures} measures** total:
-- **${qm.LongStayMeasures} Long-Stay** (residents >100 days)
-- **${qm.ShortStayMeasures} Short-Stay** (post-acute/rehab)
+1. **Hospice Care Index (HCI)** - Composite clinical quality
+   - Timeliness of care
+   - Pain assessment
+   - Dyspnea screening
+   - Bowel regimen
+   - Comprehensive assessment
+   - **Target:** ≥85% for excellence
 
-**Data Source:** ${qm.DataSource}
-**Risk Adjustment:** ${qm.RiskAdjustment}
-**Max Points:** ${qm.TotalPointsMax}
+2. **HVLDL** - Visits in Last Days of Life
+   - RN/MSW visits in final 3 days
+   - **Target:** ≥90% for excellence
 
-**Long-Stay Measures by Impact:**
-${qm.LongStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
+3. **CAHPS Survey** - Family experience
+   - Communication
+   - Symptom management
+   - Emotional support
+   - Overall rating
+   - Would recommend
+   - **Target:** ≥85% across measures
 
-**Short-Stay Measures by Impact:**
-${qm.ShortStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
+${provider ? `\n**${provider.provider_name} Scores:**
+- HCI: ${provider.hci_score ?? 'N/A'}%
+- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
+- Communication: ${provider.communication_score ?? 'N/A'}%
+- Overall: ${provider.overall_rating_score ?? 'N/A'}%` : ''}
 
-**QM Star Cut Points:**
-${qm.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points`).join('\n')}
-
-**Topped-Out Measures (Not Scored):**
-${qm.ToppedOutMeasures.map(m => `- ${m}`).join('\n')}
-
-**Focus Areas for Maximum Impact:**
-1. Falls with Major Injury (weight 3.0)
-2. Pressure Ulcers (weight 2.5)
-3. UTIs (weight 2.0)
-4. Rehospitalizations (weight 1.5)
-
-Ask about any specific measure for detailed thresholds and action plans!`;
+Ask about specific measures for detailed improvement strategies!`;
   }
 
   // ============================================
-  // OVERALL RATING CALCULATION
+  // M&A AND VALUATION
   // ============================================
-  if (lowerInput.includes('overall') || lowerInput.includes('calculate') ||
-      (lowerInput.includes('how') && lowerInput.includes('star') && lowerInput.includes('rating')) ||
-      lowerInput.includes('combined') || lowerInput.includes('total rating')) {
-    const overall = FiveStarDataset.Domains.Overall;
+  if (lowerInput.includes('value') || lowerInput.includes('valuation') || lowerInput.includes('m&a') ||
+      lowerInput.includes('acquisition') || lowerInput.includes('buy') || lowerInput.includes('deal')) {
+    return `**Hospice M&A Valuation**
 
-    return `**Overall Star Rating Calculation**
+**Valuation Methods:**
 
-The overall rating combines all three domains:
+1. **Per-ADC Method**
+   - Conservative: $25,000/ADC
+   - Market: $35,000/ADC
+   - Premium: $45,000/ADC
 
-**${overall.Integration}**
+2. **Revenue Multiple**
+   - 0.8-1.2x trailing revenue
+   - Premium for 4+ star quality
 
-**Calculation Steps:**
-${overall.CalculationMethod.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+3. **EBITDA Multiple**
+   - 3.5-5.5x adjusted EBITDA
+   - Higher for scale (ADC 75+)
 
-**Point Conversion to Stars:**
-${overall.PointConversion.map(p => `- **${p.TotalPoints} points** → ${p.OverallStars} stars`).join('\n')}
+**Value Drivers:**
+✓ Quality scores (15-25% premium/discount range)
+✓ CON state location (+15%)
+✓ ADC growth trajectory
+✓ Payer mix (Medicare %)
+✓ Staffing stability
+✓ Market position
 
-**Important Caps & Limits:**
-${overall.Caps.map(c => `⚠️ ${c}`).join('\n')}
+${provider ? `\n**For ${provider.provider_name}:**
+- ADC: ${provider.estimated_adc ?? 'Unknown'}
+- Quality Score: ${provider.overall_score ?? 'Unknown'}
+- CON Protected: ${provider.is_con_state ? 'Yes' : 'No'}
+- Classification: ${provider.classification}` : ''}
 
-**Key Insights:**
-1. Health Inspections is the BASE - you can only improve from there
-2. Poor staffing OR poor QM can cap your rating
-3. Special Focus Facilities are limited to 1 star
-4. Weekend RN coverage required for 4+ stars (2023+)
-
-**Strategic Implication:**
-If your Health Inspection rating is low, that's your ceiling. Fix citations first, then optimize Staffing and QM.`;
+Would you like a detailed valuation analysis?`;
   }
 
   // ============================================
   // IMPROVEMENT STRATEGIES
   // ============================================
-  if (lowerInput.includes('improve') && (lowerInput.includes('star') || lowerInput.includes('rating'))) {
+  if (lowerInput.includes('improve') || lowerInput.includes('better') || lowerInput.includes('increase') ||
+      lowerInput.includes('boost') || lowerInput.includes('raise')) {
     const strategies = FiveStarDataset.ImprovementStrategies.EffectivePaths;
 
-    return `**Star Rating Improvement Strategies**
+    return `**Quality Improvement Strategies**
 
-${strategies.slice(0, 3).map(s => `**${s.FromTo} Stars** (${s.Timeline}):
-${s.Focus}
+**Quick Wins (30 days):**
+1. Documentation audit and training
+2. Same-day admission visits
+3. Daily active phase huddles
+4. Family communication protocols
+5. Pain assessment standardization
 
-Key Actions:
-${s.KeyActions.slice(0, 4).map((a, i) => `${i + 1}. ${a}`).join('\n')}`).join('\n\n')}
+**Medium-Term (90 days):**
+1. Comprehensive staff training
+2. EHR workflow optimization
+3. Quality dashboard implementation
+4. Care coordinator oversight
+5. Peer chart reviews
 
-**Universal Quick Wins:**
-1. **MDS Coding Audit** - Errors can drop scores 10-20%
-2. **Fall Prevention** - Highest-weight QM
-3. **Catheter Reduction** - Easy wins available
-4. **Mock Surveys** - Find citations before state does
+**Long-Term (6-12 months):**
+1. Culture transformation
+2. Best-practice adoption
+3. Sustained monitoring
+4. Continuous improvement
 
-**Evidence:**
-- 1-star improvement → $50K+ annual revenue (better referrals)
-- 5-star facilities have 5-10% higher occupancy
+**ROI Expectations:**
+- 10-15 point improvement in 90 days achievable
+- Full program: $50-150K investment
+- Return: 3-5x through better referrals, lower risk
 
-What's your current star rating? I can give specific recommendations.`;
-  }
-
-  // Cost-effective strategies
-  if (lowerInput.includes('cost') || lowerInput.includes('budget') || lowerInput.includes('cheap') ||
-      lowerInput.includes('afford') || lowerInput.includes('free') || lowerInput.includes('low cost')) {
-    const tactics = FiveStarDataset.ImprovementStrategies.CostEffectiveTactics;
-
-    return `**Cost-Effective Improvement Strategies**
-
-**Low-Cost (Under $10K/year):**
-${tactics[0].Examples.map(e => `✓ ${e}`).join('\n')}
-**ROI:** ${tactics[0].ROI}
-
-**Medium-Cost ($10K-$50K/year):**
-${tactics[1].Examples.map(e => `✓ ${e}`).join('\n')}
-
-**Free Resources:**
-- CMS webinars and YouTube tutorials
-- QIO technical assistance (free consulting!)
-- AHCA Quality Initiative materials
-- State association resources
-
-**Pitfalls to Avoid:**
-${FiveStarDataset.ImprovementStrategies.AvoidPitfalls.map(p => `✗ ${p}`).join('\n')}
-
-**Best ROI Investments:**
-1. MDS coding training (immediate impact)
-2. Fall prevention program (highest-weight QM)
-3. Wound care protocols
-4. Catheter reduction initiative
-
-**Fact:** Staffing investments return 2-3x via lower penalties and reduced turnover costs.`;
+${provider ? `\n**For ${provider.provider_name}:** I can create a specific improvement plan based on their metrics. Ask me to "create an improvement plan for this provider."` : ''}`;
   }
 
   // ============================================
-  // M&A AND VALUATION CONTEXT
+  // DEFAULT RESPONSE
   // ============================================
-  if (lowerInput.includes('value') || lowerInput.includes('valuation') || lowerInput.includes('acquisition') ||
-      lowerInput.includes('m&a') || lowerInput.includes('buy') || lowerInput.includes('sell') ||
-      lowerInput.includes('deal') || lowerInput.includes('invest')) {
-    return `**Star Ratings & Facility Valuation**
+  return `Hi! I'm **Phill**, your hospice M&A intelligence assistant.
 
-Star ratings directly impact facility value through multiple channels:
+${provider ? `**Currently viewing:** ${provider.provider_name} (${provider.city}, ${provider.state})
+**Classification:** ${provider.classification}
+**Overall Score:** ${provider.overall_score ?? 'N/A'}
 
-**Occupancy Impact:**
-- 5-star: Premium occupancy, waitlists common
-- 3-star: Market-rate occupancy
-- 1-2 star: Occupancy challenges, discounting needed
-- **Spread:** 5-10% occupancy difference between 1★ and 5★
+I can provide specific analysis for this provider. Try:
+- "Analyze this provider"
+- "What's the valuation?"
+- "Create an improvement plan"
+- "Run due diligence"
+- "Compare to benchmarks"
 
-**Revenue Impact:**
-- Higher occupancy = more revenue
-- Better payer mix (Medicare/private pay vs. Medicaid)
-- SNF VBP payments (up to 2% Medicare adjustment)
-- Premium rates possible with quality reputation
+---
 
-**Valuation Multiples:**
-- 5-star facilities: Premium multiples (1.2-1.5x typical)
-- 1-2 star facilities: Discounted multiples (0.6-0.8x)
-- Turnaround potential: Buy low-star, improve, exit at premium
+` : ''}**I can help with:**
 
-**Due Diligence Focus Areas:**
-1. Current star ratings (overall and component)
-2. Trajectory (improving or declining?)
-3. Specific deficiency types
-4. Staffing stability
-5. QM trends over 4 quarters
+📊 **Quality Analysis**
+- Hospice Care Index (HCI)
+- CAHPS survey measures
+- Quality improvement strategies
 
-**M&A Strategy:**
-- **Value-Add Play:** Acquire 2-3 star facility, implement improvements, exit at 4-5 stars
-- **Timeline:** 12-24 months for meaningful improvement
-- **Risk:** Regulatory issues can cap upside
-
-Want details on specific valuation factors?`;
-  }
-
-  // ============================================
-  // COMPLIANCE AND REGULATORY
-  // ============================================
-  if (lowerInput.includes('compliance') || lowerInput.includes('regulat') || lowerInput.includes('cms') ||
-      lowerInput.includes('sff') || lowerInput.includes('special focus')) {
-    return `**Compliance & Regulatory Information**
-
-**Special Focus Facility (SFF) Program:**
-- Facilities with poor inspection history
-- Subject to increased survey frequency
-- Limited to 1-star overall rating
-- Candidacy status also public
-
-**Key Regulatory Requirements:**
-1. Annual standard surveys
-2. Complaint investigations (any time)
-3. PBJ quarterly submissions
-4. MDS timely submission
-5. QAPI program
-
-**Compliance Best Practices:**
-✓ Mock surveys quarterly
-✓ Self-reported incident analysis
-✓ QAPI committee active
-✓ Staff competency training
-✓ Policy and procedure updates
-
-**CMS Enforcement Actions:**
-- Civil Money Penalties (CMPs)
-- Denial of Payment for New Admissions (DPNA)
-- Termination from Medicare/Medicaid
-- State monitoring
-
-**Resources:**
-- CMS State Operations Manual
-- F-Tag Interpretive Guidelines
-- QIO consultation (free)
-
-**Key Insight:** Proactive compliance is far cheaper than reactive penalties.`;
-  }
-
-  // ============================================
-  // RESOURCES AND REFERENCES
-  // ============================================
-  if (lowerInput.includes('resource') || lowerInput.includes('guide') || lowerInput.includes('document') ||
-      lowerInput.includes('reference') || lowerInput.includes('where can i') || lowerInput.includes('link')) {
-    const resources = FiveStarDataset.Resources;
-
-    return `**CMS Five-Star Resources & References**
-
-**Official CMS Documents:**
-${resources.OfficialCMS.slice(0, 4).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
-
-**Guides and Tools:**
-${resources.GuidesAndTools.slice(0, 3).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
-
-**Research & Studies:**
-${resources.ResearchAndStudies.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
-
-**Training:**
-${resources.TrainingAndWebinars.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
-
-**Free Assistance:**
-- Quality Improvement Organizations (QIOs) - Free consulting
-- State health department resources
-- AHCA/NCAL quality resources
-
-Visit our **/learn** page for a comprehensive knowledge base!`;
-  }
-
-  // What-if simulator help
-  if (lowerInput.includes('what-if') || lowerInput.includes('simulator') || lowerInput.includes('simulate') ||
-      lowerInput.includes('project') || lowerInput.includes('forecast')) {
-    return `**What-If Simulator**
-
-Our simulator lets you model star rating improvements:
-
-**How to Use:**
-1. Go to **Quality Measures** page (/quality-measures)
-2. Select **"What-If Simulator"** tab
-3. Adjust sliders for each QM
-4. Watch projected rating update in real-time
-
-**Strategy Tips:**
-1. **Focus on high-weight measures first:**
-   - Falls with Major Injury (3.0 weight)
-   - Pressure Ulcers (2.5 weight)
-   - UTIs (2.0 weight)
-
-2. **Model realistic improvements:**
-   - 10-20% improvement in 6 months is realistic
-   - 50% improvement takes 12-18 months
-
-3. **Consider diminishing returns:**
-   - Moving from 3% to 2% is easier than 1% to 0.5%
-
-4. **Factor in seasonal variation:**
-   - Some measures have seasonal patterns
-
-**Use Case:** Before investing in a program, model the expected QM impact to justify ROI.`;
-  }
-
-  // ============================================
-  // SPECIFIC STAR LEVEL RECOMMENDATIONS
-  // ============================================
-  const starMatch = lowerInput.match(/(\d)\s*star/);
-  if (starMatch || lowerInput.includes('current rating') || lowerInput.includes('my rating') ||
-      lowerInput.includes('our rating') || lowerInput.includes('specific')) {
-    const starLevel = starMatch ? parseInt(starMatch[1]) : 3;
-    const recs = getImprovementRecommendations(starLevel);
-
-    return `**Recommendations for ${recs.fromTo} Improvement**
-
-**Timeline:** ${recs.timeline}
-
-**Priority Actions:**
-${recs.priorityActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
-
-**Key Focus Areas:**
-${recs.focus.slice(0, 6).map(f => `✓ ${f}`).join('\n')}
-
-**Expected ROI:** ${recs.expectedROI}
-
-**Monitoring:**
-- Track QM trends monthly
-- Review staffing reports weekly
-- Mock surveys quarterly
-
-What specific area would you like to focus on first?`;
-  }
-
-  // ============================================
-  // CONTEXT-AWARE RESPONSES
-  // ============================================
-
-  // Quality Measures page
-  if (pathname === '/quality-measures') {
-    return `I see you're on the **Quality Measures** page!
-
-**This page lets you:**
-1. **Overview Tab** - See priority improvement areas ranked by impact
-2. **Long-Stay/Short-Stay Tabs** - Drill into each measure with thresholds
-3. **What-If Simulator** - Model improvements and see projected star changes
-4. **Action Plan** - Get specific, actionable recommendations
-5. **CMS Methodology** - Learn exactly how ratings are calculated
-
-**Quick Tips:**
-- Focus on **highest-weight measures** first (Falls, Pressure Ulcers)
-- Use the **simulator** to see projected star changes before investing
-- Each measure has **5+ concrete action steps**
-- The **threshold table** shows exactly what you need to hit
-
-What specific measure or area would you like help with?`;
-  }
-
-  // Learn page
-  if (pathname === '/learn') {
-    return `Welcome to the **CMS Five-Star Knowledge Base**!
-
-**What You'll Find Here:**
-- **Overview** - System fundamentals and history
-- **Health Inspections** - Deficiency scoring, cut points
-- **Staffing** - HPRD requirements, 2023 rules
-- **Quality Measures** - All 28 measures with thresholds
-- **Overall Rating** - How it all combines
-- **Improvement Strategies** - Evidence-based paths
-- **Resources** - Links to official CMS documents
-
-**Pro Tip:** Use the tabs to explore each domain in depth. Each section has:
-- Exact thresholds and cut points
-- Action plans for improvement
-- Key formulas and calculations
-
-Ask me specific questions anytime!`;
-  }
-
-  // Provider detail page
-  if (pathname.startsWith('/provider/')) {
-    return `Looking at a **specific provider**? I can help you understand:
-
-**Quality Analysis:**
-- What's driving their current star rating
-- Which QMs are strengths vs. weaknesses
-- How they compare to state/national benchmarks
-
-**Improvement Opportunities:**
-- Specific measures to target
-- Expected impact of improvements
-- Cost-benefit analysis
-
-**M&A Considerations:**
-- Valuation impact of star ratings
-- Turnaround potential
-- Regulatory risk factors
-
-**What would you like to explore?**
-- "Show me their QM breakdown"
-- "What could improve their rating?"
-- "How does this affect valuation?"`;
-  }
-
-  // Deals page
-  if (pathname === '/deals') {
-    return `Managing your **deal pipeline**? Star ratings are critical for:
-
-**Due Diligence:**
-- Overall rating trend (improving/declining)
-- Component ratings (HI, Staffing, QM)
-- Specific deficiency patterns
-- Pending survey results
-
-**Valuation Adjustments:**
-- 5-star: Premium multiple
-- 3-star: Market rate
-- 1-2 star: Discount for turnaround work
-
-**Integration Planning:**
-- Timeline to improve ratings post-acquisition
-- Investment needed for improvements
-- Key staffing/operational changes
-
-**Ask me about:**
-- "How do stars affect valuation multiples?"
-- "What's the turnaround timeline for a 2-star?"
-- "What due diligence should I request?"`;
-  }
-
-  // Map page
-  if (pathname === '/map') {
-    return `Exploring the **geographic view**? Here's what to look for:
-
-**Market Dynamics:**
-- Star rating distribution by market
-- Consolidation opportunities
-- Competitive positioning
-
-**Opportunity Identification:**
-- Low-star facilities in strong markets
-- Clustering of similar-rated facilities
-- Rural vs. urban rating patterns
-
-**M&A Insights:**
-- Markets with improvement potential
-- Competition from high-rated players
-- Regulatory environment by state
-
-**Tip:** CON (Certificate of Need) states often have different dynamics than non-CON states.`;
-  }
-
-  // Insights page
-  if (pathname === '/insights') {
-    return `Viewing **market insights**? Star ratings provide context:
-
-**Market Analysis:**
-- Average star rating by market
-- Rating trends over time
-- Best/worst performing segments
-
-**Competitive Intelligence:**
-- Competitor star ratings
-- Market positioning opportunities
-- Quality leaders vs. laggards
-
-**Investment Thesis:**
-- Where are ratings improving?
-- Turnaround opportunities
-- Premium quality markets
-
-Ask about specific markets or trends!`;
-  }
-
-  // Valuation page
-  if (pathname === '/valuation') {
-    return `Working on **valuations**? Star ratings impact value through:
-
-**Direct Revenue Impact:**
-- Occupancy correlation (5-10% spread)
-- Payer mix quality
-- SNF VBP payments (up to 2%)
-- Managed care contract access
-
-**Risk Factors:**
-- SFF status = significant discount
-- Declining ratings = risk premium
-- Staffing instability = operational risk
-
-**Valuation Adjustments:**
-- 5-star: 1.2-1.5x typical multiple
-- 3-star: Market multiple
-- 1-2 star: 0.6-0.8x with turnaround plan
-
-**Model Inputs:**
-- Current rating and trend
-- Time/cost to improve
-- Market competition quality
-
-What specific valuation aspect can I help with?`;
-  }
-
-  // ============================================
-  // DEFAULT COMPREHENSIVE RESPONSE
-  // ============================================
-  return `Hi! I'm **Phill**, your CMS Five-Star expert. I have comprehensive knowledge of the entire rating system.
-
-**I can help you with:**
-
-📊 **Quality Measures (28 total)**
-- All Long-Stay and Short-Stay measures
-- Exact star thresholds for each
-- Specific action plans to improve
-
-⭐ **Star Rating Calculation**
-- Health Inspection scoring
-- Staffing requirements (including 2023 rules)
-- Overall rating computation
-
-📈 **Improvement Strategies**
-- Evidence-based paths from 1→5 stars
-- Cost-effective tactics (many free!)
-- ROI data and timelines
-
-💰 **M&A & Valuation**
-- How ratings affect facility value
+💰 **M&A Intelligence**
+- Valuation methodologies
 - Due diligence guidance
-- Turnaround potential analysis
+- Market analysis
 
-**Try asking me:**
-- "How do I reduce falls?"
+📈 **Improvement Planning**
+- Specific action plans
+- ROI analysis
+- Timeline projections
+
+**Try asking:**
+- "How is HCI calculated?"
 - "What are the staffing requirements?"
-- "How is the overall rating calculated?"
-- "What's the ROI of improving to 4 stars?"
-- "Explain pressure ulcer thresholds"
-- "How do stars affect valuation?"
-
-Or visit **/learn** for the full knowledge base!`;
+- "Explain hospice quality measures"
+- "How do quality scores affect value?"`;
 }
 
 // ============================================
-// CONTEXT-AWARE QUICK ACTIONS
+// QUICK ACTIONS
 // ============================================
 
-function getQuickActions(pathname: string): QuickAction[] {
-  const baseActions: QuickAction[] = [
-    { label: 'QM Overview', prompt: 'Give me an overview of all quality measures', icon: <Activity className="w-4 h-4" /> },
-    { label: 'Improve Stars', prompt: 'How can I improve star ratings cost-effectively?', icon: <Star className="w-4 h-4" /> },
-  ];
+function getQuickActions(pathname: string, provider: ProviderData | null): QuickAction[] {
+  // Provider-specific quick actions
+  if (provider && pathname.startsWith('/provider/')) {
+    return [
+      { label: 'Full Analysis', prompt: 'Give me a comprehensive analysis of this provider', icon: <BarChart3 className="w-4 h-4" /> },
+      { label: 'Valuation', prompt: 'What is the estimated valuation for this hospice?', icon: <DollarSign className="w-4 h-4" /> },
+      { label: 'Improve', prompt: 'Create an improvement action plan for this provider', icon: <TrendingUp className="w-4 h-4" /> },
+      { label: 'Due Diligence', prompt: 'Generate a due diligence checklist for this acquisition', icon: <FileText className="w-4 h-4" /> },
+    ];
+  }
 
+  // Quality measures page
   if (pathname === '/quality-measures') {
     return [
-      { label: 'Falls Plan', prompt: 'Give me the complete action plan to reduce falls', icon: <AlertTriangle className="w-4 h-4" /> },
-      { label: 'What-If Help', prompt: 'How do I use the What-If Simulator?', icon: <Calculator className="w-4 h-4" /> },
-      { label: 'QM Thresholds', prompt: 'What are all the star thresholds for quality measures?', icon: <Target className="w-4 h-4" /> },
-      { label: 'Methodology', prompt: 'Explain the CMS calculation methodology', icon: <BookOpen className="w-4 h-4" /> },
+      { label: 'HCI Explained', prompt: 'Explain the Hospice Care Index in detail', icon: <Activity className="w-4 h-4" /> },
+      { label: 'CAHPS Guide', prompt: 'How do CAHPS surveys work?', icon: <Star className="w-4 h-4" /> },
+      { label: 'Improve QM', prompt: 'How can I improve quality measure scores?', icon: <TrendingUp className="w-4 h-4" /> },
+      { label: 'Thresholds', prompt: 'What are the star rating thresholds?', icon: <Target className="w-4 h-4" /> },
     ];
   }
 
-  if (pathname === '/learn') {
-    return [
-      { label: 'Health Inspections', prompt: 'Explain the Health Inspections domain with scoring details', icon: <Shield className="w-4 h-4" /> },
-      { label: 'Staffing Rules', prompt: 'Explain staffing requirements including 2023 changes', icon: <Users className="w-4 h-4" /> },
-      { label: 'All 28 QMs', prompt: 'List all 28 quality measures with their weights', icon: <Activity className="w-4 h-4" /> },
-      { label: 'Resources', prompt: 'What CMS resources and guides are available?', icon: <BookOpen className="w-4 h-4" /> },
-    ];
-  }
-
-  if (pathname.startsWith('/provider/')) {
-    return [
-      { label: 'Rating Impact', prompt: 'How do star ratings affect facility value?', icon: <TrendingUp className="w-4 h-4" /> },
-      { label: 'Quick Wins', prompt: 'What are quick wins to improve star ratings?', icon: <Zap className="w-4 h-4" /> },
-      { label: 'QM Analysis', prompt: 'How do I analyze a facility\'s QM performance?', icon: <BarChart3 className="w-4 h-4" /> },
-      { label: 'Due Diligence', prompt: 'What star rating due diligence should I do?', icon: <FileText className="w-4 h-4" /> },
-    ];
-  }
-
+  // Deals/valuation pages
   if (pathname === '/deals' || pathname === '/valuation') {
     return [
-      { label: 'Valuation Impact', prompt: 'How do star ratings affect valuation multiples?', icon: <DollarSign className="w-4 h-4" /> },
-      { label: 'Turnaround Timeline', prompt: 'How long does it take to improve star ratings?', icon: <Clock className="w-4 h-4" /> },
-      { label: 'Due Diligence', prompt: 'What rating data should I request in due diligence?', icon: <FileText className="w-4 h-4" /> },
-      { label: 'Risk Factors', prompt: 'What regulatory risks affect facility value?', icon: <AlertTriangle className="w-4 h-4" /> },
+      { label: 'Valuation Methods', prompt: 'Explain hospice valuation methodologies', icon: <Calculator className="w-4 h-4" /> },
+      { label: 'Due Diligence', prompt: 'What should I look for in due diligence?', icon: <FileText className="w-4 h-4" /> },
+      { label: 'Quality Impact', prompt: 'How do quality scores affect valuation?', icon: <Star className="w-4 h-4" /> },
+      { label: 'Deal Structure', prompt: 'What deal structures work for hospice M&A?', icon: <DollarSign className="w-4 h-4" /> },
     ];
   }
 
-  if (pathname === '/map' || pathname === '/insights') {
-    return [
-      { label: 'Market Analysis', prompt: 'How do star ratings vary by market?', icon: <BarChart3 className="w-4 h-4" /> },
-      { label: 'CON States', prompt: 'How do CON states affect quality ratings?', icon: <Building2 className="w-4 h-4" /> },
-      ...baseActions,
-    ];
-  }
-
+  // Default actions
   return [
-    ...baseActions,
-    { label: 'Calculation', prompt: 'How is the overall star rating calculated?', icon: <Calculator className="w-4 h-4" /> },
-    { label: 'Resources', prompt: 'What resources and guides are available?', icon: <FileText className="w-4 h-4" /> },
+    { label: 'Quality Measures', prompt: 'Explain hospice quality measures', icon: <Activity className="w-4 h-4" /> },
+    { label: 'Improve Ratings', prompt: 'How can I improve quality ratings?', icon: <TrendingUp className="w-4 h-4" /> },
+    { label: 'Valuation', prompt: 'How are hospices valued for M&A?', icon: <DollarSign className="w-4 h-4" /> },
+    { label: 'M&A Strategy', prompt: 'What makes a good acquisition target?', icon: <Target className="w-4 h-4" /> },
   ];
 }
 
@@ -1111,8 +1106,9 @@ export function PhillAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
+  const { provider } = usePhillContext();
 
-  const quickActions = getQuickActions(pathname);
+  const quickActions = getQuickActions(pathname, provider);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1123,6 +1119,13 @@ export function PhillAssistant() {
       inputRef.current?.focus();
     }
   }, [isOpen, isMinimized]);
+
+  // Reset messages when provider changes
+  useEffect(() => {
+    if (provider) {
+      setMessages([]);
+    }
+  }, [provider?.ccn]);
 
   const handleSend = useCallback(async (messageText?: string) => {
     const text = messageText || input.trim();
@@ -1139,9 +1142,18 @@ export function PhillAssistant() {
     setInput('');
     setIsTyping(true);
 
-    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
+    // Simulate thinking time
+    await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
 
-    const response = generateResponse(text, pathname);
+    // Generate response with provider context
+    let response: string;
+
+    if (provider) {
+      const specificResponse = generateProviderSpecificAnalysis(provider, text);
+      response = specificResponse || generateGeneralResponse(text, pathname, provider);
+    } else {
+      response = generateGeneralResponse(text, pathname, null);
+    }
 
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
@@ -1152,7 +1164,7 @@ export function PhillAssistant() {
 
     setMessages(prev => [...prev, assistantMessage]);
     setIsTyping(false);
-  }, [input, pathname]);
+  }, [input, pathname, provider]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1179,8 +1191,15 @@ export function PhillAssistant() {
             <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full text-xs font-bold flex items-center justify-center border-2 border-white">
               P
             </span>
+            {provider && (
+              <span className="absolute -bottom-1 -left-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                <Building2 className="w-3 h-3 text-white" />
+              </span>
+            )}
             <div className="absolute right-full mr-3 px-3 py-1.5 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <span className="text-sm font-medium">Ask Phill - Five-Star Expert</span>
+              <span className="text-sm font-medium">
+                {provider ? `Ask about ${provider.provider_name}` : 'Ask Phill - M&A Expert'}
+              </span>
             </div>
           </motion.button>
         )}
@@ -1193,17 +1212,19 @@ export function PhillAssistant() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-48px)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+            className="fixed bottom-6 right-6 z-50 w-[480px] max-w-[calc(100vw-48px)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5" />
+                  <Brain className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-semibold">Phill</h3>
-                  <p className="text-xs text-white/80">CMS Five-Star Expert</p>
+                  <p className="text-xs text-white/80">
+                    {provider ? `Analyzing ${provider.provider_name.substring(0, 25)}...` : 'M&A Intelligence Assistant'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -1222,6 +1243,23 @@ export function PhillAssistant() {
               </div>
             </div>
 
+            {/* Provider Context Banner */}
+            {provider && !isMinimized && (
+              <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20">
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="w-4 h-4 text-purple-500" />
+                  <span className="font-medium text-purple-400">{provider.provider_name}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    provider.classification === 'GREEN' ? 'bg-emerald-500/20 text-emerald-400' :
+                    provider.classification === 'YELLOW' ? 'bg-amber-500/20 text-amber-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {provider.classification}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Chat Body */}
             <AnimatePresence>
               {!isMinimized && (
@@ -1232,18 +1270,24 @@ export function PhillAssistant() {
                   className="overflow-hidden"
                 >
                   {/* Messages */}
-                  <div className="h-[400px] overflow-y-auto p-4 space-y-4">
+                  <div className="h-[420px] overflow-y-auto p-4 space-y-4">
                     {messages.length === 0 ? (
                       <div className="text-center py-4">
                         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-turquoise-500)]/10 flex items-center justify-center">
-                          <Sparkles className="w-8 h-8 text-[var(--color-turquoise-500)]" />
+                          <Brain className="w-8 h-8 text-[var(--color-turquoise-500)]" />
                         </div>
                         <h4 className="font-semibold mb-2">Hi, I'm Phill!</h4>
                         <p className="text-sm text-[var(--color-text-muted)] mb-1">
-                          Your CMS Five-Star rating expert.
+                          {provider
+                            ? `I've loaded ${provider.provider_name}'s data. Ask me anything specific about this provider.`
+                            : 'Your hospice M&A intelligence assistant.'
+                          }
                         </p>
                         <p className="text-xs text-[var(--color-text-muted)] mb-4">
-                          I know all 28 quality measures, star thresholds, improvement strategies, and M&A implications.
+                          {provider
+                            ? 'I can analyze quality, estimate value, create improvement plans, and generate due diligence checklists.'
+                            : 'I know quality measures, valuation, improvement strategies, and M&A best practices.'
+                          }
                         </p>
 
                         {/* Quick Actions */}
@@ -1277,12 +1321,15 @@ export function PhillAssistant() {
                               }`}
                             >
                               <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                {msg.content.split(/(\*\*.*?\*\*|\`.*?\`)/g).map((part, i) => {
+                                {msg.content.split(/(\*\*.*?\*\*|\`.*?\`|\|.*\|)/g).map((part, i) => {
                                   if (part.startsWith('**') && part.endsWith('**')) {
                                     return <strong key={i}>{part.slice(2, -2)}</strong>;
                                   }
                                   if (part.startsWith('`') && part.endsWith('`')) {
                                     return <code key={i} className="px-1 py-0.5 rounded bg-black/20 text-xs font-mono">{part.slice(1, -1)}</code>;
+                                  }
+                                  if (part.startsWith('|') && part.endsWith('|')) {
+                                    return <span key={i} className="font-mono text-xs">{part}</span>;
                                   }
                                   return part;
                                 })}
@@ -1293,8 +1340,9 @@ export function PhillAssistant() {
 
                         {isTyping && (
                           <div className="flex justify-start">
-                            <div className="bg-[var(--color-bg-secondary)] p-3 rounded-2xl rounded-tl-sm">
-                              <Loader2 className="w-5 h-5 animate-spin text-[var(--color-turquoise-500)]" />
+                            <div className="bg-[var(--color-bg-secondary)] p-3 rounded-2xl rounded-tl-sm flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-[var(--color-turquoise-500)]" />
+                              <span className="text-xs text-[var(--color-text-muted)]">Analyzing...</span>
                             </div>
                           </div>
                         )}
@@ -1313,7 +1361,7 @@ export function PhillAssistant() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Ask about quality measures, star ratings, M&A..."
+                        placeholder={provider ? `Ask about ${provider.provider_name}...` : 'Ask about quality, value, M&A...'}
                         className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:border-[var(--color-turquoise-500)] focus:ring-1 focus:ring-[var(--color-turquoise-500)] transition-colors text-sm"
                       />
                       <button

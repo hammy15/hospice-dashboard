@@ -14,6 +14,7 @@ import {
 import { ClassificationBadge } from './ClassificationBadge';
 import { WatchlistButton } from './WatchlistButton';
 import FiveStarDataset, { getActionPlan, getImprovementRecommendations } from '@/lib/knowledge';
+import { useSetPhillProvider } from './PhillAssistant';
 
 interface ProviderDetailClientProps {
   provider: any;
@@ -149,6 +150,9 @@ export function ProviderDetailClient({
   carryBackAnalysis
 }: ProviderDetailClientProps) {
   const [activeQMTab, setActiveQMTab] = useState<'long' | 'short'>('long');
+
+  // Pass provider data to Phill AI assistant context
+  useSetPhillProvider(provider);
 
   const formatScore = (score: number | string | null) => {
     if (score === null || score === undefined) return '—';

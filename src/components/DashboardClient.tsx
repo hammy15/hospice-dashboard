@@ -8,7 +8,12 @@ import {
   Target, AlertTriangle, XCircle, Shield, TrendingUp, MapPin,
   Building2, Users, ChevronRight, ArrowUpRight, Zap, Activity,
   BarChart3, PieChart, Map, DollarSign, Star, Filter, X, Handshake,
-  Sparkles, Scale, PiggyBank
+  Sparkles, Scale, PiggyBank, ChevronDown, FileText, Clock,
+  TrendingDown, AlertCircle, CheckCircle2, Info, Briefcase,
+  Calculator, LineChart, Target as TargetIcon, Award, Lightbulb,
+  BookOpen, Eye, Layers, Grid3X3, ArrowRight, ExternalLink,
+  Percent, Hash, Building, Heart, Stethoscope, BadgeCheck,
+  ThumbsUp, ThumbsDown, Minus, Brain, Compass, Rocket
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -22,6 +27,202 @@ interface DashboardProps {
   conComparison: any[];
   endemicStats?: any;
   pipelineStats?: any;
+}
+
+// Expandable Section Component
+function ExpandableSection({
+  title,
+  icon: Icon,
+  defaultOpen = false,
+  badge,
+  variant = 'default',
+  children
+}: {
+  title: string;
+  icon: any;
+  defaultOpen?: boolean;
+  badge?: string;
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info';
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const variantColors = {
+    default: 'border-[var(--color-border)]',
+    success: 'border-emerald-500/30',
+    warning: 'border-amber-500/30',
+    danger: 'border-red-500/30',
+    info: 'border-[var(--color-turquoise-500)]/30'
+  };
+
+  return (
+    <div className={`rounded-xl border ${variantColors[variant]} bg-[var(--color-bg-secondary)]/50 overflow-hidden`}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 hover:bg-[var(--color-bg-hover)] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5 text-[var(--color-turquoise-500)]" />
+          <span className="font-semibold">{title}</span>
+          {badge && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-400)]">
+              {badge}
+            </span>
+          )}
+        </div>
+        <ChevronDown className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="p-4 pt-0 border-t border-[var(--color-border)]">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Detailed Metric Card
+function DetailedMetricCard({
+  label,
+  value,
+  subtext,
+  trend,
+  details,
+  icon: Icon
+}: {
+  label: string;
+  value: string | number;
+  subtext?: string;
+  trend?: 'up' | 'down' | 'neutral';
+  details?: string;
+  icon?: any;
+}) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  return (
+    <div
+      className="p-4 rounded-xl bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-all cursor-pointer relative group"
+      onClick={() => details && setShowDetails(!showDetails)}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-xs text-[var(--color-text-muted)] mb-1 flex items-center gap-2">
+            {Icon && <Icon className="w-3.5 h-3.5" />}
+            {label}
+          </div>
+          <div className="text-2xl font-bold font-mono">{value}</div>
+          {subtext && <div className="text-[11px] text-[var(--color-turquoise-500)] mt-1">{subtext}</div>}
+        </div>
+        {trend && (
+          <div className={`p-1.5 rounded-lg ${
+            trend === 'up' ? 'bg-emerald-500/20 text-emerald-500' :
+            trend === 'down' ? 'bg-red-500/20 text-red-500' :
+            'bg-gray-500/20 text-gray-500'
+          }`}>
+            {trend === 'up' ? <TrendingUp className="w-4 h-4" /> :
+             trend === 'down' ? <TrendingDown className="w-4 h-4" /> :
+             <Minus className="w-4 h-4" />}
+          </div>
+        )}
+      </div>
+      {details && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Info className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+        </div>
+      )}
+      <AnimatePresence>
+        {showDetails && details && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mt-3 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)]"
+          >
+            {details}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Score Indicator with drill-down
+function ScoreIndicator({
+  score,
+  label,
+  maxScore = 100,
+  breakdown
+}: {
+  score: number;
+  label: string;
+  maxScore?: number;
+  breakdown?: { name: string; value: number; weight: number }[];
+}) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const percentage = (score / maxScore) * 100;
+  const color = percentage >= 70 ? '#10b981' : percentage >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="relative">
+      <div
+        className="flex items-center gap-3 p-3 rounded-lg bg-[var(--color-bg-tertiary)] cursor-pointer hover:bg-[var(--color-bg-hover)] transition-colors"
+        onClick={() => breakdown && setShowBreakdown(!showBreakdown)}
+      >
+        <div className="relative w-12 h-12">
+          <svg className="w-12 h-12 transform -rotate-90">
+            <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-[var(--color-border)]" />
+            <circle
+              cx="24" cy="24" r="20" fill="none" stroke={color} strokeWidth="4"
+              strokeDasharray={`${percentage * 1.256} 125.6`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">{score}</span>
+        </div>
+        <div>
+          <div className="text-sm font-medium">{label}</div>
+          <div className="text-xs text-[var(--color-text-muted)]">
+            {percentage >= 70 ? 'Strong' : percentage >= 40 ? 'Moderate' : 'Needs Attention'}
+          </div>
+        </div>
+        {breakdown && <ChevronDown className={`w-4 h-4 ml-auto transition-transform ${showBreakdown ? 'rotate-180' : ''}`} />}
+      </div>
+      <AnimatePresence>
+        {showBreakdown && breakdown && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mt-2 p-3 rounded-lg bg-[var(--color-bg-tertiary)] space-y-2"
+          >
+            {breakdown.map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-xs">
+                <span className="text-[var(--color-text-secondary)]">{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-1.5 rounded-full bg-[var(--color-border)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--color-turquoise-500)]"
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                  <span className="font-mono w-8 text-right">{item.value}%</span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 const MiniBarChart = ({ data, maxValue, color }: { data: number[]; maxValue: number; color: string }) => (
@@ -89,6 +290,7 @@ export function DashboardClient({
   const router = useRouter();
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'overview' | 'detailed'>('overview');
 
   const greenCount = Number(stats.green_count);
   const yellowCount = Number(stats.yellow_count);
@@ -98,6 +300,8 @@ export function DashboardClient({
 
   const greenRate = ((greenCount / totalCount) * 100).toFixed(1);
   const conCoverage = ((greenConCount / greenCount) * 100).toFixed(0);
+  const yellowRate = ((yellowCount / totalCount) * 100).toFixed(1);
+  const redRate = ((redCount / totalCount) * 100).toFixed(1);
 
   // Prepare chart data
   const adcValues = adcDistribution.map((d: any) => Number(d.green_count) || 0);
@@ -107,19 +311,48 @@ export function DashboardClient({
 
   const topStates = stateStats.slice(0, 6);
 
+  // Calculate advanced metrics
+  const avgGreenAdc = stats.avg_green_adc || 0;
+  const avgGreenScore = stats.avg_green_score || 0;
+  const endemicGreen = endemicStats?.endemic_green || 0;
+  const primeCarryBack = endemicStats?.prime_carry_back_targets || 0;
+  const totalMarketValue = pipelineStats?.total_market_value_mm || 0;
+
   return (
-    <div className="max-w-[1600px] mx-auto px-4 lg:px-6">
-      {/* Compact Header */}
+    <div className="max-w-[1800px] mx-auto px-4 lg:px-6">
+      {/* Enhanced Header with View Toggle */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold font-[family-name:var(--font-display)]">
-            <span className="gradient-text">Command Center</span>
+            <span className="gradient-text">M&A Intelligence Command Center</span>
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
-            {totalCount.toLocaleString()} providers • Live data
+            {totalCount.toLocaleString()} hospice providers • Real-time CMS data • Comprehensive acquisition intelligence
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg bg-[var(--color-bg-tertiary)] p-1">
+            <button
+              onClick={() => setActiveView('overview')}
+              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                activeView === 'overview'
+                  ? 'bg-[var(--color-turquoise-500)] text-white'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveView('detailed')}
+              className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                activeView === 'detailed'
+                  ? 'bg-[var(--color-turquoise-500)] text-white'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+              }`}
+            >
+              Detailed
+            </button>
+          </div>
           <Link
             href="/search"
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors text-sm"
@@ -137,8 +370,131 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* Executive Summary Section */}
+      <ExpandableSection
+        title="Executive Summary & Market Overview"
+        icon={Briefcase}
+        defaultOpen={true}
+        badge="Critical Intel"
+      >
+        <div className="space-y-6">
+          {/* Market Narrative */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--color-turquoise-500)]/5 to-transparent border border-[var(--color-turquoise-500)]/20">
+            <h4 className="font-semibold mb-3 flex items-center gap-2">
+              <Brain className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+              Strategic Market Assessment
+            </h4>
+            <div className="text-sm text-[var(--color-text-secondary)] space-y-3">
+              <p>
+                <strong className="text-[var(--color-text-primary)]">Current Market Position:</strong> The hospice M&A landscape presents {greenCount.toLocaleString()} actionable acquisition targets out of {totalCount.toLocaleString()} total providers ({greenRate}% opportunity rate). This represents a {greenCount > 500 ? 'robust' : 'selective'} acquisition environment with significant consolidation potential.
+              </p>
+              <p>
+                <strong className="text-[var(--color-text-primary)]">Quality Distribution Analysis:</strong> GREEN-classified providers demonstrate above-average quality metrics across CMS Five-Star domains. The current distribution shows {greenRate}% meeting acquisition criteria, {yellowRate}% requiring monitoring or operational improvement post-acquisition, and {redRate}% presenting elevated risk profiles that may require extensive remediation or should be avoided.
+              </p>
+              <p>
+                <strong className="text-[var(--color-text-primary)]">Strategic Recommendation:</strong> Focus acquisition efforts on Certificate of Need (CON) states where {greenConCount} GREEN targets benefit from regulatory barriers to entry. Endemic (independent single-location) operators represent prime targets with {endemicGreen} identified opportunities, often featuring motivated sellers approaching retirement with operational patterns favorable for owner financing arrangements.
+              </p>
+            </div>
+          </div>
+
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <DetailedMetricCard
+              label="Total Addressable Market"
+              value={`${totalCount.toLocaleString()}`}
+              subtext="Active hospice providers"
+              icon={Building}
+              details="Includes all Medicare-certified hospice providers currently operating in the United States. Data sourced from CMS Provider Enrollment and Certification files, updated quarterly. Market composition: ~65% for-profit, ~30% non-profit, ~5% government-affiliated."
+            />
+            <DetailedMetricCard
+              label="Acquisition-Ready Targets"
+              value={greenCount.toLocaleString()}
+              subtext={`${greenRate}% of market`}
+              trend="up"
+              icon={Target}
+              details="GREEN classification indicates providers meeting all quality thresholds: Overall Star Rating ≥4, no Special Focus Facility designation, no recent survey enforcement actions, stable ADC trajectory, and favorable ownership patterns. These represent low-risk acquisition candidates."
+            />
+            <DetailedMetricCard
+              label="Estimated Market Value"
+              value={`$${totalMarketValue}M`}
+              subtext="GREEN segment"
+              icon={DollarSign}
+              details="Conservative market valuation based on ADC × revenue multiple methodology. Assumes average per-patient-day reimbursement of $195, 85% Medicare mix, and 3.5-4.5x EBITDA multiple typical for quality hospice transactions. Actual valuations vary by geography, payer mix, and quality metrics."
+            />
+            <DetailedMetricCard
+              label="Prime Seller-Finance Candidates"
+              value={primeCarryBack}
+              subtext="Owner carry-back likely"
+              trend="up"
+              icon={Handshake}
+              details="Identified through proprietary algorithm analyzing: owner age indicators (LLC formation >15 years), single-location operation, stable quality metrics, no chain affiliation, CON state protection, and operational patterns suggesting approaching retirement. These targets often accept 20-40% seller financing."
+            />
+          </div>
+
+          {/* Investment Thesis */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+              <h5 className="font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+                <ThumbsUp className="w-4 h-4" />
+                Bull Case Factors
+              </h5>
+              <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Demographic Tailwinds:</strong> 10,000 Americans turning 65 daily through 2030, driving sustained hospice demand growth of 7-9% annually</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Regulatory Stability:</strong> Medicare hospice benefit well-established since 1982 with consistent reimbursement, CMS rate increases averaging 2-3% annually</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Fragmented Market:</strong> ~5,000 providers with top 10 chains controlling only ~25% market share, significant roll-up opportunity remains</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Recurring Revenue:</strong> Average length of stay ~90 days with predictable per diem reimbursement model, minimal bad debt exposure</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Low Capital Intensity:</strong> Asset-light model with care delivered in patient homes, minimal facility investment required</span>
+                </li>
+              </ul>
+            </div>
+            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+              <h5 className="font-semibold text-red-400 mb-3 flex items-center gap-2">
+                <ThumbsDown className="w-4 h-4" />
+                Bear Case Factors & Risk Mitigation
+              </h5>
+              <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Reimbursement Risk:</strong> CMS payment reform proposals could impact margins; mitigate through diversified payer mix and operational efficiency</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Compliance Scrutiny:</strong> OIG has increased hospice fraud investigations; mitigate through rigorous due diligence and quality-first acquisition criteria</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Labor Market Challenges:</strong> RN and aide shortages affecting all healthcare; mitigate through geographic focus and retention programs</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>Integration Complexity:</strong> Culture and staff retention critical; mitigate through measured integration approach and incentive alignment</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <span><strong>CAP Liability:</strong> Aggregate payment cap can create year-end exposure; mitigate through LOS management and ADC growth strategies</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </ExpandableSection>
+
       {/* Bento Grid Layout */}
-      <div className="grid grid-cols-12 gap-3 lg:gap-4">
+      <div className="grid grid-cols-12 gap-3 lg:gap-4 mt-6">
 
         {/* === ROW 1: Signal Cards === */}
 
@@ -565,11 +921,543 @@ export function DashboardClient({
 
       </div>
 
+      {/* Deep Dive Sections */}
+      <div className="mt-6 space-y-4">
+
+        {/* Rating System Deep Dive */}
+        <ExpandableSection
+          title="Classification Methodology & Rating System"
+          icon={Award}
+          badge="CMS Aligned"
+        >
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <Target className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <h5 className="font-semibold text-emerald-400">GREEN Classification</h5>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                  Providers meeting all quality thresholds representing prime acquisition candidates with minimal remediation requirements.
+                </p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Overall CMS Star Rating ≥ 4 stars</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>No Special Focus Facility (SFF) designation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>No recent survey enforcement actions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Stable or growing ADC trajectory</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Quality scores above 70th percentile</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <h5 className="font-semibold text-amber-400">YELLOW Classification</h5>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                  Providers with mixed indicators requiring additional due diligence or post-acquisition improvement plans.
+                </p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Overall CMS Star Rating 2.5-3.5 stars</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Some quality metrics below threshold</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Historical survey issues (resolved)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>ADC fluctuation requiring analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    <span>May present value-add opportunity</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  </div>
+                  <h5 className="font-semibold text-red-400">RED Classification</h5>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                  Providers with significant concerns requiring extensive remediation or presenting unacceptable acquisition risk.
+                </p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Overall CMS Star Rating &lt; 2.5 stars</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Active SFF or enforcement status</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Critical survey deficiencies</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Declining ADC trend</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span>Multiple compliance violations</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CMS Quality Domains */}
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <h5 className="font-semibold mb-4 flex items-center gap-2">
+                <Star className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                CMS Hospice Quality Reporting Program (HQRP) Domains
+              </h5>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">Hospice Care Index (HCI)</h6>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Composite measure evaluating timeliness of care, pain assessment, dyspnea screening, bowel regimen, and comprehensive assessment completion within 5 days.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">CAHPS Hospice Survey</h6>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Family experience measures including communication, respect, emotional support, symptom management, information provision, and overall rating.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">Hospice Visits at End of Life</h6>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Measures evaluating RN/MSW visits in last 3 days of life and visit patterns in final 7 days, reflecting commitment to end-of-life care.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">Utilization Metrics</h6>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Average daily census, length of stay distribution, live discharge rates, and continuous/general inpatient care utilization patterns.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ExpandableSection>
+
+        {/* Market Intelligence */}
+        <ExpandableSection
+          title="Market Intelligence & Competitive Landscape"
+          icon={Compass}
+          badge="Strategic Intel"
+        >
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="font-semibold mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                  Certificate of Need (CON) State Analysis
+                </h5>
+                <div className="space-y-3">
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    CON states require state approval before establishing new hospice operations, creating regulatory barriers that protect existing providers from competition. This makes acquisitions more valuable as they represent the primary market entry strategy.
+                  </p>
+                  <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-3">Key CON States with GREEN Targets</h6>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex justify-between p-2 rounded bg-[var(--color-bg-secondary)]">
+                        <span>Washington</span>
+                        <span className="text-emerald-500 font-mono">7 GREEN</span>
+                      </div>
+                      <div className="flex justify-between p-2 rounded bg-[var(--color-bg-secondary)]">
+                        <span>Oregon</span>
+                        <span className="text-emerald-500 font-mono">CON Protected</span>
+                      </div>
+                      <div className="flex justify-between p-2 rounded bg-[var(--color-bg-secondary)]">
+                        <span>Montana</span>
+                        <span className="text-emerald-500 font-mono">CON Protected</span>
+                      </div>
+                      <div className="flex justify-between p-2 rounded bg-[var(--color-bg-secondary)]">
+                        <span>Hawaii</span>
+                        <span className="text-emerald-500 font-mono">CON Protected</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <p className="text-xs text-emerald-400">
+                      <strong>Strategic Value:</strong> CON protection typically supports 15-25% premium valuations due to competitive moat and limited market entry alternatives.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="font-semibold mb-4 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                  Ownership Structure Analysis
+                </h5>
+                <div className="space-y-3">
+                  <p className="text-sm text-[var(--color-text-secondary)]">
+                    Understanding ownership patterns helps identify motivated sellers and assess integration complexity. Endemic (single-location independent) operators often present the best owner carry-back opportunities.
+                  </p>
+                  <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-3">Ownership Distribution</h6>
+                    <div className="space-y-2">
+                      {ownershipStats.map((o: any) => (
+                        <div key={o.type} className="flex items-center justify-between p-2 rounded bg-[var(--color-bg-secondary)]">
+                          <span className="text-sm">{o.type || 'Other'}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-emerald-500 font-mono">{o.green_count} GREEN</span>
+                            <span className="text-xs text-[var(--color-text-muted)]">{o.total_count} total</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-teal-500/5 border border-teal-500/20">
+                    <p className="text-xs text-teal-400">
+                      <strong>Opportunity Focus:</strong> Endemic GREEN providers represent {endemicGreen} targets with higher likelihood of seller financing due to owner retirement patterns and business transition preferences.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Market Size & Growth */}
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <h5 className="font-semibold mb-4 flex items-center gap-2">
+                <LineChart className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Hospice Industry Market Dynamics
+              </h5>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Total US Market</div>
+                  <div className="text-xl font-bold font-mono">$26B+</div>
+                  <div className="text-[10px] text-[var(--color-turquoise-500)]">Annual Medicare spend</div>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Growth Rate</div>
+                  <div className="text-xl font-bold font-mono">7-9%</div>
+                  <div className="text-[10px] text-[var(--color-turquoise-500)]">Annual CAGR</div>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Fragmentation</div>
+                  <div className="text-xl font-bold font-mono">~5,000</div>
+                  <div className="text-[10px] text-[var(--color-turquoise-500)]">Active providers</div>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Top 10 Share</div>
+                  <div className="text-xl font-bold font-mono">~25%</div>
+                  <div className="text-[10px] text-[var(--color-turquoise-500)]">Consolidation opportunity</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ExpandableSection>
+
+        {/* Acquisition Strategies */}
+        <ExpandableSection
+          title="Acquisition Strategies & Deal Structures"
+          icon={Handshake}
+          badge="Playbooks"
+        >
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-4 rounded-xl bg-teal-500/5 border border-teal-500/20">
+                <h5 className="font-semibold text-teal-400 mb-3 flex items-center gap-2">
+                  <Handshake className="w-4 h-4" />
+                  Owner Carry-Back Strategy
+                </h5>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                  Seller financing (owner carry-back) reduces capital requirements and aligns seller interests with successful transition. Optimal for endemic operators approaching retirement.
+                </p>
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-2">Ideal Candidate Profile</h6>
+                    <ul className="space-y-1 text-xs text-[var(--color-text-secondary)]">
+                      <li>• Single-location independent operator</li>
+                      <li>• LLC formation 15+ years ago</li>
+                      <li>• Owner-operator in clinical/admin role</li>
+                      <li>• Stable quality metrics (GREEN classification)</li>
+                      <li>• CON state location preferred</li>
+                      <li>• No chain affiliation or recent sales attempts</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-2">Typical Structure</h6>
+                    <ul className="space-y-1 text-xs text-[var(--color-text-secondary)]">
+                      <li>• 60-80% cash at close</li>
+                      <li>• 20-40% seller note (5-7 year term)</li>
+                      <li>• Interest rate: Prime + 1-2%</li>
+                      <li>• Earnout based on ADC/quality retention</li>
+                      <li>• Management transition support (6-12 months)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
+                <h5 className="font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                  <Rocket className="w-4 h-4" />
+                  Platform Build Strategy
+                </h5>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                  For investors seeking scale, platform building involves acquiring a strong initial asset then executing bolt-on acquisitions to create regional density.
+                </p>
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-2">Platform Anchor Criteria</h6>
+                    <ul className="space-y-1 text-xs text-[var(--color-text-secondary)]">
+                      <li>• ADC 50+ with growth capacity</li>
+                      <li>• Strong management team to retain</li>
+                      <li>• 5-star or strong 4-star rating</li>
+                      <li>• Multi-county service area potential</li>
+                      <li>• Back-office scalability</li>
+                      <li>• EHR/technology platform in place</li>
+                    </ul>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[var(--color-bg-tertiary)]">
+                    <h6 className="text-sm font-medium mb-2">Bolt-On Criteria</h6>
+                    <ul className="space-y-1 text-xs text-[var(--color-text-secondary)]">
+                      <li>• Geographic adjacency to platform</li>
+                      <li>• ADC 20-40 (digestible size)</li>
+                      <li>• Synergy potential 15-25%</li>
+                      <li>• Management not required long-term</li>
+                      <li>• Back-office can be consolidated</li>
+                      <li>• Referral relationship value</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Valuation Framework */}
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <h5 className="font-semibold mb-4 flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Valuation Framework & Multiples
+              </h5>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">Revenue Multiple</h6>
+                  <div className="text-2xl font-bold font-mono text-[var(--color-turquoise-500)]">0.8-1.2x</div>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+                    Trailing 12-month Medicare revenue. Premium for 4+ star rating, CON state, growing ADC. Discount for quality issues or declining census.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">EBITDA Multiple</h6>
+                  <div className="text-2xl font-bold font-mono text-[var(--color-turquoise-500)]">3.5-5.5x</div>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+                    Adjusted EBITDA accounting for owner comp normalization. Higher multiple for scale (ADC 75+), quality, and strategic positioning.
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-[var(--color-bg-secondary)]">
+                  <h6 className="text-sm font-medium mb-2">Per-ADC Value</h6>
+                  <div className="text-2xl font-bold font-mono text-[var(--color-turquoise-500)]">$25-45K</div>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+                    Quick valuation proxy. Varies by geography, payer mix, quality metrics, and competitive dynamics in service area.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ExpandableSection>
+
+        {/* Due Diligence Checklist */}
+        <ExpandableSection
+          title="Due Diligence Framework & Risk Assessment"
+          icon={FileText}
+          badge="Comprehensive"
+        >
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <h5 className="font-semibold mb-3 flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                  Clinical & Quality
+                </h5>
+                <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>CMS quality measure trends (3 years)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>CAHPS survey scores and trajectory</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>State survey history and deficiencies</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Plans of correction compliance</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Clinical protocols and documentation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Medical director qualifications</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <h5 className="font-semibold mb-3 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                  Financial & Operational
+                </h5>
+                <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>3 years audited financials</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>ADC trends and seasonality</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Payer mix and reimbursement rates</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Medicare cap liability exposure</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Cost structure and labor ratios</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>HCRIS cost report analysis</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+                <h5 className="font-semibold mb-3 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                  Compliance & Legal
+                </h5>
+                <ul className="space-y-2 text-xs text-[var(--color-text-secondary)]">
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>OIG exclusion list verification</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>State licensure and accreditation</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>CON certificate transferability</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Employment agreements and non-competes</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Billing compliance review</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-4 h-4 rounded border border-[var(--color-border)] flex-shrink-0 mt-0.5" />
+                    <span>Pending litigation or investigations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Risk Matrix */}
+            <div className="p-4 rounded-xl bg-[var(--color-bg-tertiary)]">
+              <h5 className="font-semibold mb-4 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Risk Assessment Matrix
+              </h5>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <th className="text-left p-2">Risk Category</th>
+                      <th className="text-left p-2">GREEN Indicators</th>
+                      <th className="text-left p-2">YELLOW Indicators</th>
+                      <th className="text-left p-2">RED Indicators</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[var(--color-text-secondary)]">
+                    <tr className="border-b border-[var(--color-border)]">
+                      <td className="p-2 font-medium">Quality Rating</td>
+                      <td className="p-2">4-5 stars, stable/improving</td>
+                      <td className="p-2">3-3.5 stars, stable</td>
+                      <td className="p-2">&lt;3 stars, declining</td>
+                    </tr>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <td className="p-2 font-medium">Survey History</td>
+                      <td className="p-2">No deficiencies or minor only</td>
+                      <td className="p-2">Some deficiencies, all corrected</td>
+                      <td className="p-2">Repeat/serious deficiencies</td>
+                    </tr>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <td className="p-2 font-medium">ADC Trend</td>
+                      <td className="p-2">Growing or stable 3+ years</td>
+                      <td className="p-2">Flat or slight decline</td>
+                      <td className="p-2">Sustained decline &gt;10%</td>
+                    </tr>
+                    <tr className="border-b border-[var(--color-border)]">
+                      <td className="p-2 font-medium">Financial</td>
+                      <td className="p-2">EBITDA margin &gt;15%</td>
+                      <td className="p-2">EBITDA margin 8-15%</td>
+                      <td className="p-2">EBITDA margin &lt;8%</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-medium">Compliance</td>
+                      <td className="p-2">Clean OIG, no investigations</td>
+                      <td className="p-2">Historical issues, resolved</td>
+                      <td className="p-2">Active investigation/exclusion</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ExpandableSection>
+      </div>
+
       {/* Compact Footer */}
       <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
-          <span>CMS Provider Data • Census Demographics • HCRIS Financials</span>
-          <span>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+          <span>CMS Provider Data • CMS Quality Measures • HCRIS Financials • Census Demographics</span>
+          <span>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} • Real-time Intelligence</span>
         </div>
       </div>
     </div>
