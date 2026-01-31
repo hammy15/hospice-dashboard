@@ -7,6 +7,7 @@ import {
   Building2, MapPin, TrendingUp, DollarSign, Users, Shield,
   CheckCircle, Phone, Globe, AlertTriangle
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface Provider {
   ccn: string;
@@ -108,6 +109,139 @@ export default function ReportsPage() {
     window.print();
   }
 
+  function downloadPDF() {
+    if (!reportData) return;
+
+    const doc = new jsPDF();
+    const { provider } = reportData;
+    const margin = 20;
+    let y = margin;
+
+    // Helper function
+    const addSection = (title: string) => {
+      if (y > 250) {
+        doc.addPage();
+        y = margin;
+      }
+      y += 10;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(13, 148, 136); // teal
+      doc.text(title, margin, y);
+      y += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+    };
+
+    const addRow = (label: string, value: string | number | null) => {
+      if (y > 270) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.text(label + ':', margin, y);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(value ?? '-'), margin + 60, y);
+      y += 6;
+    };
+
+    // Header
+    doc.setFillColor(13, 148, 136);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(provider.provider_name, margin, 18);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`CCN: ${provider.ccn}`, margin, 26);
+    doc.text(`${provider.city}, ${provider.state} ${provider.zip_code}`, margin, 33);
+
+    // Classification badge
+    const classColors: Record<string, [number, number, number]> = {
+      GREEN: [16, 185, 129],
+      YELLOW: [245, 158, 11],
+      RED: [239, 68, 68],
+    };
+    const badgeColor = classColors[provider.classification] || [128, 128, 128];
+    doc.setFillColor(...badgeColor);
+    doc.roundedRect(160, 12, 30, 10, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.text(provider.classification, 167, 19);
+
+    y = 55;
+    doc.setTextColor(0, 0, 0);
+
+    // Scores Section
+    addSection('Acquisition Scores');
+    const scores = [
+      ['Overall', provider.overall_score],
+      ['Quality', provider.quality_score],
+      ['Compliance', provider.compliance_score],
+      ['Operational', provider.operational_score],
+      ['Market', provider.market_score],
+    ];
+    doc.setFontSize(10);
+    let xPos = margin;
+    scores.forEach(([label, score]) => {
+      doc.setFont('helvetica', 'normal');
+      doc.text(String(label), xPos, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(String(score ?? '-'), xPos, y + 7);
+      doc.setFontSize(10);
+      xPos += 35;
+    });
+    y += 18;
+
+    // Operations Section
+    addSection('Operations');
+    addRow('Estimated ADC', provider.estimated_adc);
+    addRow('ADC Fit', provider.adc_fit);
+    addRow('Competitive Density', provider.competitive_density);
+    addRow('Deal Type', provider.platform_vs_tuckin);
+    addRow('Outreach Readiness', provider.outreach_readiness);
+
+    // Financials Section
+    addSection('Financials');
+    addRow('Total Revenue', provider.total_revenue ? formatCurrency(provider.total_revenue) : '-');
+    addRow('Total Expenses', provider.total_expenses ? formatCurrency(provider.total_expenses) : '-');
+    addRow('Net Income', provider.net_income ? formatCurrency(provider.net_income) : '-');
+
+    // Ownership Section
+    addSection('Ownership');
+    addRow('Type', provider.ownership_type_cms);
+    addRow('PE Backed', provider.pe_backed ? 'Yes' : 'No');
+    addRow('Chain Affiliated', provider.chain_affiliated ? 'Yes' : 'No');
+    addRow('Owner Count', provider.owner_count);
+    addRow('Complexity', provider.ownership_complexity);
+
+    // Market Demographics Section
+    addSection('Market Demographics');
+    addRow('County', provider.county);
+    addRow('CON State', provider.con_state ? 'Yes' : 'No');
+    addRow('County Pop 65+', provider.county_pop_65_plus ? formatNumber(provider.county_pop_65_plus) : '-');
+    addRow('% Pop 65+', provider.county_pct_65_plus ? `${Number(provider.county_pct_65_plus).toFixed(1)}%` : '-');
+    addRow('Median Income', provider.county_median_income ? formatCurrency(provider.county_median_income) : '-');
+
+    // Contact Section
+    addSection('Contact Information');
+    addRow('Administrator', provider.administrator_name);
+    addRow('Phone', provider.phone_number);
+    addRow('Website', provider.website);
+    addRow('Address', `${provider.address_line_1}, ${provider.city}, ${provider.state} ${provider.zip_code}`);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`My5StarReport - Generated ${new Date().toLocaleDateString()}`, margin, 285);
+
+    // Save
+    doc.save(`${provider.provider_name.replace(/[^a-z0-9]/gi, '_')}_Report.pdf`);
+  }
+
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-8">
       {/* Header - hide when printing */}
@@ -156,13 +290,22 @@ export default function ReportsPage() {
           </button>
 
           {reportData && (
-            <button
-              onClick={handlePrint}
-              className="px-6 py-2 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] font-medium transition-colors flex items-center gap-2"
-            >
-              <Printer className="w-4 h-4" />
-              Print / Save PDF
-            </button>
+            <>
+              <button
+                onClick={downloadPDF}
+                className="px-6 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-medium transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
+              <button
+                onClick={handlePrint}
+                className="px-6 py-2 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] font-medium transition-colors flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+            </>
           )}
         </div>
 
