@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navigation } from './Navigation';
 import { SplashScreen } from './SplashScreen';
 import { DemoTour, useDemoTour } from './DemoTour';
@@ -17,6 +18,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [showSplash, setShowSplash] = useState(true);
   const [mounted, setMounted] = useState(false);
   const { isOpen, openDemo, closeDemo, completeDemo } = useDemoTour();
+  const pathname = usePathname();
+
+  // Hide shell UI on landing page
+  const isLandingPage = pathname === '/landing';
 
   useEffect(() => {
     setMounted(true);
@@ -26,6 +31,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setShowSplash(false);
     }
   }, []);
+
+  // Landing page gets clean slate - no app shell
+  if (isLandingPage) {
+    return <>{children}</>;
+  }
 
   // Prevent hydration mismatch
   if (!mounted) {

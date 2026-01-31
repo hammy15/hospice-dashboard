@@ -40,7 +40,7 @@ export default function ExportPage() {
   const [peOnly, setPeOnly] = useState(false);
   const [independentOnly, setIndependentOnly] = useState(false);
   const [search, setSearch] = useState('');
-  const [format, setFormat] = useState<'csv' | 'json'>('csv');
+  const [format, setFormat] = useState<'csv' | 'xlsx' | 'json'>('xlsx');
 
   // Presets
   const presets: Record<string, string[]> = {
@@ -136,28 +136,30 @@ export default function ExportPage() {
       const url = '/api/export?' + params.toString();
       const response = await fetch(url);
 
+      const dateStr = new Date().toISOString().split('T')[0];
+      let blob: Blob;
+      let filename: string;
+
       if (format === 'json') {
         const data = await response.json();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = 'hospice-export-' + new Date().toISOString().split('T')[0] + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
+        blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        filename = `hospice-export-${dateStr}.json`;
+      } else if (format === 'xlsx') {
+        blob = await response.blob();
+        filename = `hospice-export-${dateStr}.xlsx`;
       } else {
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = 'hospice-export-' + new Date().toISOString().split('T')[0] + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
+        blob = await response.blob();
+        filename = `hospice-export-${dateStr}.csv`;
       }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error('Export error:', error);
     } finally {
@@ -453,7 +455,17 @@ export default function ExportPage() {
           {/* Export Format */}
           <div className="glass-card rounded-xl p-6">
             <h3 className="font-semibold mb-4">Export Format</h3>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFormat('xlsx')}
+                className={'flex-1 py-2 rounded-lg font-medium text-sm transition-colors ' +
+                  (format === 'xlsx'
+                    ? 'bg-[var(--color-turquoise-500)] text-white'
+                    : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)]')
+                }
+              >
+                Excel
+              </button>
               <button
                 onClick={() => setFormat('csv')}
                 className={'flex-1 py-2 rounded-lg font-medium text-sm transition-colors ' +

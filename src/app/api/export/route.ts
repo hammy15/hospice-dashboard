@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import * as XLSX from 'xlsx';
 
 // All available export fields with metadata
 const AVAILABLE_FIELDS: Record<string, { label: string; category: string; column: string }> = {
@@ -162,8 +163,51 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Generate CSV
+    // Format data with readable values
     const headers = selectedFields.map(f => AVAILABLE_FIELDS[f].label);
+    const formattedData = results.map((row: Record<string, unknown>) => {
+      const formattedRow: Record<string, unknown> = {};
+      selectedFields.forEach((field, i) => {
+        const value = row[field];
+        if (value === null || value === undefined) {
+          formattedRow[headers[i]] = '';
+        } else if (typeof value === 'boolean') {
+          formattedRow[headers[i]] = value ? 'Yes' : 'No';
+        } else {
+          formattedRow[headers[i]] = value;
+        }
+      });
+      return formattedRow;
+    });
+
+    // Generate Excel
+    if (format === 'xlsx') {
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Hospice Providers');
+
+      // Auto-size columns
+      const colWidths = headers.map((header, i) => {
+        const maxLen = Math.max(
+          header.length,
+          ...formattedData.map(row => String(row[header] || '').length)
+        );
+        return { wch: Math.min(maxLen + 2, 50) };
+      });
+      worksheet['!cols'] = colWidths;
+
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename="hospice-export-${new Date().toISOString().split('T')[0]}.xlsx"`,
+        },
+      });
+    }
+
+    // Generate CSV
     const csvRows = [headers.join(',')];
 
     for (const row of results) {
