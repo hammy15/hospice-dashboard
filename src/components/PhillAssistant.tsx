@@ -1206,33 +1206,33 @@ Deep-dive teaching on any topic:
   // Default response without provider
   return {
     type: 'text',
-    content: `# Hi! I'm Phill, Your Expert Hospice M&A Intelligence Consultant
+    content: `# Hi! I'm Phill, Your Expert 5-Star Quality Intelligence Consultant
 
-I'm not a simple chatbot - I'm an **expert-level interactive consultant** trained on CMS regulations, AHCA research, quality improvement methodologies, and M&A best practices.
+I'm not a simple chatbot - I'm an **expert-level interactive consultant** trained on CMS regulations, AHCA research, quality improvement methodologies, and evidence-based improvement strategies.
 
 ---
 
 ## 🎓 **My Expertise Includes:**
 
-### Quality Rating Analysis
+### ⭐ Quality Rating Analysis
 - Complete CMS 5-Star methodology understanding
 - HCI, HVLDL, and CAHPS measure deep-dives
 - Evidence-based improvement strategies with ROI projections
 - Historical context and regulatory framework
 
-### Strategic Planning
+### 📋 Strategic Planning
 - Detailed improvement roadmaps with cost-benefit analysis
 - Phase-by-phase timelines with investment requirements
 - Risk assessment and mitigation strategies
-- Case studies from comparable hospice improvements
+- Case studies from comparable provider improvements
 
-### M&A Intelligence
-- Multi-methodology valuation approaches
-- Quality-adjusted pricing models
-- Deal structuring considerations
-- Due diligence focus areas
+### 📊 Performance Analytics
+- Quality measure tracking and benchmarking
+- Staffing metrics and HPRD optimization
+- Compliance monitoring and deficiency prevention
+- CAHPS survey improvement strategies
 
-### Expert Education
+### 🎓 Expert Education
 - Historical context for every recommendation
 - Quantitative analysis with formulas and benchmarks
 - Real-world case studies with documented ROI
@@ -1848,7 +1848,7 @@ export function PhillAssistant() {
                     <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded ml-1">EXPERT</span>
                   </h3>
                   <p className="text-xs text-white/80">
-                    {provider ? `Analyzing ${provider.provider_name.substring(0, 25)}...` : 'M&A Intelligence Consultant'}
+                    {provider ? `Analyzing ${provider.provider_name.substring(0, 25)}...` : '5-Star Quality Intelligence'}
                   </p>
                 </div>
               </div>
@@ -1898,7 +1898,7 @@ export function PhillAssistant() {
                     <Brain className="w-10 h-10 text-[var(--color-turquoise-400)]" />
                   </div>
                   <h4 className="font-bold text-lg mb-1">Hi! I'm Phill</h4>
-                  <p className="text-xs text-purple-400 font-medium mb-2">Expert Hospice M&A Intelligence Consultant</p>
+                  <p className="text-xs text-purple-400 font-medium mb-2">Expert 5-Star Quality Intelligence Consultant</p>
                   <p className="text-sm text-[var(--color-text-muted)] mb-1 max-w-md mx-auto">
                     {provider
                       ? `I've loaded ${provider.provider_name}'s complete profile and I'm ready to provide expert-level analysis with evidence-based recommendations.`

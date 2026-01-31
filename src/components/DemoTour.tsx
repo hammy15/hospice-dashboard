@@ -25,12 +25,12 @@ const demoSteps: DemoStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to My 5 Star Report',
-    description: 'The M&A intelligence platform built for Aavencare to identify, analyze, and acquire hospice agencies across the United States. Let\'s walk through how to find your next acquisition opportunity.',
+    description: 'Your comprehensive CMS 5-Star Quality Rating intelligence platform. Track quality measures, compliance metrics, CAHPS scores, and performance trends for healthcare providers nationwide.',
     icon: <Sparkles className="w-8 h-8" />,
     stats: [
-      { label: 'Providers Tracked', value: '4,800+' },
-      { label: 'States Covered', value: '50' },
-      { label: 'Data Points', value: '100+' },
+      { label: 'Providers Tracked', value: '6,970+' },
+      { label: 'Quality Metrics', value: '100+' },
+      { label: 'Star Ratings', value: '5★' },
     ],
   },
   {
@@ -167,12 +167,12 @@ const demoSteps: DemoStep[] = [
   {
     id: 'ready',
     title: 'You\'re Ready to Go!',
-    description: 'You now know how to use My 5 Star Report to find, analyze, and acquire hospice agencies. Start by exploring the Dashboard or search for providers in your target markets. Good luck growing Aavencare\'s footprint!',
+    description: 'You now know how to use My 5 Star Report to track quality ratings, analyze compliance metrics, and monitor provider performance. Start by exploring the Dashboard or ask Phill for personalized improvement strategies!',
     icon: <CheckCircle className="w-8 h-8" />,
     stats: [
       { label: 'Time Saved', value: '80%' },
       { label: 'Data Accuracy', value: '99%' },
-      { label: 'Deal Flow', value: '10x' },
+      { label: 'Insights', value: '∞' },
     ],
   },
 ];

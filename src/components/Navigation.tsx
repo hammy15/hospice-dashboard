@@ -102,14 +102,14 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center glow-turquoise">
-              <Database className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Star className="w-5 h-5 text-white fill-white" />
             </div>
             <div>
               <h1 className="font-[family-name:var(--font-display)] font-bold text-lg leading-tight">
-                Hospice Tracker
+                My 5 Star Report
               </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">M&A Intelligence Platform</p>
+              <p className="text-xs text-[var(--color-text-muted)]">CMS Quality Rating Intelligence</p>
             </div>
           </Link>
 

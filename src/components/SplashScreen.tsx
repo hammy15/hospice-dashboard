@@ -131,33 +131,25 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: phase >= 1 ? 1 : 0, rotate: 360 }}
                   transition={{ rotate: { duration: 20, repeat: Infinity, ease: 'linear' } }}
-                  className="absolute inset-0 rounded-full border-2 border-[var(--color-turquoise-500)]/30"
+                  className="absolute inset-0 rounded-full border-2 border-amber-500/30"
                 />
 
                 {/* Pulsing ring */}
                 <motion.div
                   animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 rounded-full border border-[var(--color-turquoise-400)]"
+                  className="absolute inset-0 rounded-full border border-amber-400"
                 />
 
-                {/* Main logo */}
-                <div className="absolute inset-2 rounded-full bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center shadow-lg shadow-[var(--color-turquoise-500)]/30">
+                {/* Main logo - 5 Star */}
+                <div className="absolute inset-2 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
                   <svg
                     viewBox="0 0 24 24"
-                    fill="none"
+                    fill="currentColor"
                     className="w-12 h-12 text-white"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
                   >
-                    {/* Crosshair/Target icon */}
-                    <circle cx="12" cy="12" r="10" strokeOpacity="0.3" />
-                    <circle cx="12" cy="12" r="6" />
-                    <circle cx="12" cy="12" r="2" fill="currentColor" />
-                    <line x1="12" y1="2" x2="12" y2="6" />
-                    <line x1="12" y1="18" x2="12" y2="22" />
-                    <line x1="2" y1="12" x2="6" y2="12" />
-                    <line x1="18" y1="12" x2="22" y2="12" />
+                    {/* 5-pointed star */}
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 </div>
               </div>
@@ -173,8 +165,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-5xl md:text-6xl font-[family-name:var(--font-display)] font-bold text-white mb-2 tracking-tight">
-                <span className="text-[var(--color-turquoise-400)]">Hospice</span>
-                <span className="text-white">Tracker</span>
+                <span className="text-amber-400">My 5 Star</span>
+                <span className="text-white"> Report</span>
               </h1>
               <motion.p
                 initial={{ opacity: 0 }}
@@ -182,7 +174,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
                 transition={{ delay: 0.2, duration: 0.5 }}
                 className="text-lg text-gray-400 font-medium tracking-wide"
               >
-                M&A Intelligence Platform
+                CMS Quality Rating Intelligence
               </motion.p>
             </motion.div>
 
@@ -198,8 +190,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             >
               {[
                 { value: '6,970', label: 'Providers Tracked' },
-                { value: '360', label: 'GREEN Targets' },
-                { value: '55', label: 'Markets' },
+                { value: '5★', label: 'Rating System' },
+                { value: '100+', label: 'Quality Metrics' },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
