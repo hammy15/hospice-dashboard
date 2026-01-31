@@ -109,6 +109,193 @@ function getScoreQuality(score: number | null, benchmarks: { excellent: number; 
   return { level: 'Needs Improvement', color: 'red', description: 'Below average, priority focus area' };
 }
 
+// Calculate gaps and priority areas for a specific provider
+function calculateProviderGaps(provider: ProviderData) {
+  const fiveStarThresholds = {
+    hci: { threshold: 92, name: 'Hospice Care Index (HCI)', weight: 25 },
+    hvldl: { threshold: 95, name: 'Visits in Last Days of Life (HVLDL)', weight: 20 },
+    communication: { threshold: 88, name: 'Communication with Family', weight: 15 },
+    timely_care: { threshold: 90, name: 'Timely Care', weight: 12 },
+    training: { threshold: 85, name: 'Training Family to Care', weight: 10 },
+    beliefs_values: { threshold: 88, name: 'Beliefs & Values Addressed', weight: 10 },
+    overall_rating: { threshold: 90, name: 'Overall Rating', weight: 5 },
+    willing_recommend: { threshold: 92, name: 'Would Recommend', weight: 3 },
+  };
+
+  const gaps: Array<{
+    metric: string;
+    current: number;
+    target: number;
+    gap: number;
+    weight: number;
+    priority: number;
+    specificActions: string[];
+    timeline: string;
+    investment: string;
+  }> = [];
+
+  // HCI
+  if (provider.hci_score !== null) {
+    const gap = fiveStarThresholds.hci.threshold - provider.hci_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.hci.name,
+        current: provider.hci_score,
+        target: fiveStarThresholds.hci.threshold,
+        gap,
+        weight: fiveStarThresholds.hci.weight,
+        priority: gap * fiveStarThresholds.hci.weight,
+        specificActions: [
+          `${provider.provider_name} needs to improve pain assessment completion from current levels to 100% within 48 hours of admission`,
+          'Implement a "No Assessment Left Behind" protocol with daily audit of all new admissions',
+          'Create an automated EHR alert for any patient without completed comprehensive assessment by Day 3',
+          'Train all RNs on proper dyspnea screening using the Borg Scale or validated tool',
+          'Establish standing orders for bowel regimen for ALL patients on opioids - document within 24 hours',
+          'Designate a "HCI Champion" on staff to perform weekly chart audits and real-time coaching',
+          'Hold daily 10-minute morning huddles to review any patients with missing documentation',
+        ],
+        timeline: gap > 15 ? '4-6 months' : gap > 8 ? '2-3 months' : '4-6 weeks',
+        investment: gap > 15 ? '$25,000-40,000' : gap > 8 ? '$12,000-20,000' : '$5,000-10,000',
+      });
+    }
+  }
+
+  // HVLDL
+  if (provider.hvldl_score !== null) {
+    const gap = fiveStarThresholds.hvldl.threshold - provider.hvldl_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.hvldl.name,
+        current: provider.hvldl_score,
+        target: fiveStarThresholds.hvldl.threshold,
+        gap,
+        weight: fiveStarThresholds.hvldl.weight,
+        priority: gap * fiveStarThresholds.hvldl.weight,
+        specificActions: [
+          `${provider.provider_name} must increase RN and Social Worker visits in the final 3 days of life`,
+          'Implement "Actively Dying Protocol" that auto-triggers daily RN visits when patient shows 2+ death-imminent signs',
+          'Create a "Last Days Response Team" with designated on-call RN for immediate response',
+          'Train ALL clinical staff on the 8 key death-imminent indicators (Cheyne-Stokes, mottling, etc.)',
+          'Require Social Worker visit within 24 hours once death appears imminent',
+          'Add HVLDL compliance to daily census review - flag any imminent patients without scheduled visits',
+          'Ensure 24/7 on-call RN can deploy within 2 hours for any imminent patient',
+          'Create weekend/holiday visit schedule template that maintains daily coverage for imminent patients',
+        ],
+        timeline: gap > 12 ? '3-4 months' : gap > 5 ? '6-8 weeks' : '3-4 weeks',
+        investment: gap > 12 ? '$30,000-50,000 (staffing)' : '$10,000-20,000',
+      });
+    }
+  }
+
+  // Communication
+  if (provider.communication_score !== null) {
+    const gap = fiveStarThresholds.communication.threshold - provider.communication_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.communication.name,
+        current: provider.communication_score,
+        target: fiveStarThresholds.communication.threshold,
+        gap,
+        weight: fiveStarThresholds.communication.weight,
+        priority: gap * fiveStarThresholds.communication.weight,
+        specificActions: [
+          `${provider.provider_name} family caregivers report communication gaps - this directly affects star ratings`,
+          'Implement "Call Family First" policy: RN calls family within 4 hours of any significant change',
+          'Create structured family conference template for care plan reviews - minimum monthly',
+          'Train staff on AIDET communication framework (Acknowledge, Introduce, Duration, Explanation, Thank)',
+          'Establish weekly proactive family check-in calls for all patients - not just when problems arise',
+          'Add communication training to new hire orientation with role-playing scenarios',
+          'Create "What to Expect" printed materials for each disease trajectory',
+          'Implement after-visit summaries sent to family email within 24 hours',
+        ],
+        timeline: gap > 10 ? '3-4 months' : '4-8 weeks',
+        investment: '$8,000-15,000 (training + materials)',
+      });
+    }
+  }
+
+  // Timely Care
+  if (provider.timely_care_score !== null) {
+    const gap = fiveStarThresholds.timely_care.threshold - provider.timely_care_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.timely_care.name,
+        current: provider.timely_care_score,
+        target: fiveStarThresholds.timely_care.threshold,
+        gap,
+        weight: fiveStarThresholds.timely_care.weight,
+        priority: gap * fiveStarThresholds.timely_care.weight,
+        specificActions: [
+          `${provider.provider_name} needs to improve response times for urgent patient/family requests`,
+          'Establish <4 hour response time SLA for all urgent symptom calls',
+          'Create tiered call response protocol: emergent (30 min), urgent (2 hr), routine (same day)',
+          'Staff a dedicated triage RN during peak call hours (8am-8pm)',
+          'Implement on-call response tracking with documented callback times',
+          'Add "time to response" as a key performance indicator for all clinical staff',
+        ],
+        timeline: gap > 8 ? '2-3 months' : '4-6 weeks',
+        investment: '$15,000-25,000 (staffing adjustments)',
+      });
+    }
+  }
+
+  // Training
+  if (provider.training_score !== null) {
+    const gap = fiveStarThresholds.training.threshold - provider.training_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.training.name,
+        current: provider.training_score,
+        target: fiveStarThresholds.training.threshold,
+        gap,
+        weight: fiveStarThresholds.training.weight,
+        priority: gap * fiveStarThresholds.training.weight,
+        specificActions: [
+          `${provider.provider_name} families don't feel adequately trained to provide care at home`,
+          'Create standardized "Caregiver Skills Training" curriculum covering: medications, comfort care, when to call',
+          'Develop video library of key caregiving skills families can review at home',
+          'Provide hands-on demonstration and return demonstration for ALL medication administration',
+          'Schedule dedicated "teaching visits" separate from routine nursing visits',
+          'Create printed quick-reference cards for symptom management, medication timing, emergency contacts',
+          'Add caregiver competency checkoff to patient record',
+        ],
+        timeline: gap > 10 ? '2-3 months' : '4-6 weeks',
+        investment: '$6,000-12,000 (curriculum + materials)',
+      });
+    }
+  }
+
+  // Beliefs & Values
+  if (provider.beliefs_values_score !== null) {
+    const gap = fiveStarThresholds.beliefs_values.threshold - provider.beliefs_values_score;
+    if (gap > 0) {
+      gaps.push({
+        metric: fiveStarThresholds.beliefs_values.name,
+        current: provider.beliefs_values_score,
+        target: fiveStarThresholds.beliefs_values.threshold,
+        gap,
+        weight: fiveStarThresholds.beliefs_values.weight,
+        priority: gap * fiveStarThresholds.beliefs_values.weight,
+        specificActions: [
+          `${provider.provider_name} needs better spiritual/cultural care integration`,
+          'Add spiritual/cultural assessment to initial intake with documented preferences',
+          'Train chaplain to visit ALL new patients within first week regardless of stated religious preference',
+          'Create cultural competency training for common cultural practices around death and dying',
+          'Document patient spiritual preferences prominently in care plan',
+          'Ensure IDT meetings include discussion of spiritual/cultural needs',
+          'Partner with local faith communities for expanded spiritual support options',
+        ],
+        timeline: '4-8 weeks',
+        investment: '$4,000-8,000 (training)',
+      });
+    }
+  }
+
+  // Sort by priority (gap × weight)
+  gaps.sort((a, b) => b.priority - a.priority);
+  return gaps;
+}
+
 function generateProviderSpecificAnalysis(provider: ProviderData, query: string): string | null {
   const lowerQuery = query.toLowerCase();
   const name = provider.provider_name;
@@ -119,6 +306,198 @@ function generateProviderSpecificAnalysis(provider: ProviderData, query: string)
   const hvldlQuality = getScoreQuality(provider.hvldl_score, { excellent: 90, good: 80, fair: 70 });
   const commQuality = getScoreQuality(provider.communication_score, { excellent: 85, good: 78, fair: 70 });
   const overallQuality = getScoreQuality(provider.overall_score, { excellent: 85, good: 75, fair: 60 });
+
+  // ============================================
+  // 5-STAR PATH - PROVIDER-SPECIFIC ROADMAP
+  // ============================================
+  if (lowerQuery.includes('5 star') || lowerQuery.includes('5-star') || lowerQuery.includes('five star') ||
+      lowerQuery.includes('get to 5') || lowerQuery.includes('reach 5') || lowerQuery.includes('achieve 5') ||
+      lowerQuery.includes('become 5') || lowerQuery.includes('how to get') || lowerQuery.includes('path to')) {
+
+    const gaps = calculateProviderGaps(provider);
+    const totalGapPoints = gaps.reduce((sum, g) => sum + g.gap, 0);
+    const totalInvestment = gaps.reduce((sum, g) => {
+      const low = parseInt(g.investment.replace(/[^0-9]/g, '')) || 0;
+      return sum + low;
+    }, 0);
+
+    // Estimate current star rating
+    const estimatedStars = provider.overall_score !== null
+      ? provider.overall_score >= 85 ? 5
+        : provider.overall_score >= 70 ? 4
+        : provider.overall_score >= 55 ? 3
+        : provider.overall_score >= 40 ? 2 : 1
+      : 3;
+
+    // Calculate time to 5 stars
+    const timeEstimate = totalGapPoints > 100 ? '12-18 months'
+      : totalGapPoints > 60 ? '8-12 months'
+      : totalGapPoints > 30 ? '4-6 months'
+      : '2-4 months';
+
+    if (gaps.length === 0) {
+      return `**${name} - Path to 5 Stars**
+
+🌟 **Congratulations!** Based on available data, ${name} appears to already be performing at or near 5-star levels across key quality measures.
+
+**Current Performance:**
+- Overall Score: ${provider.overall_score ?? 'N/A'}
+- HCI: ${provider.hci_score ?? 'N/A'}%
+- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
+- Communication: ${provider.communication_score ?? 'N/A'}%
+
+**Maintenance Strategy:**
+1. **Sustain Excellence** - Continue current protocols without complacency
+2. **Monitor Monthly** - Track all quality metrics monthly to catch any early declines
+3. **Staff Retention** - High-performing staff are your greatest asset; invest in retention
+4. **Culture Reinforcement** - Regularly celebrate quality wins with the team
+5. **Best Practice Sharing** - Document what's working for training and scalability
+
+**Risk Factors to Watch:**
+- Staff turnover (can rapidly impact quality)
+- Volume growth without proportional staffing
+- EHR changes that disrupt documentation workflows
+- Survey timing and preparation
+
+Would you like detailed strategies for maintaining 5-star status?`;
+    }
+
+    return `**${name} - Detailed Path to 5-Star Status**
+
+**CURRENT STATE ASSESSMENT**
+
+📊 **Estimated Current Rating:** ${estimatedStars} Stars
+📈 **Overall Score:** ${provider.overall_score ?? 'N/A'}/100
+🏥 **Location:** ${provider.city}, ${provider.state}
+📋 **Classification:** ${classification}
+
+---
+
+**THE GAP ANALYSIS: What ${name} Needs to Improve**
+
+${gaps.slice(0, 5).map((g, i) => `
+**${i + 1}. ${g.metric}** ⚠️ GAP: ${g.gap.toFixed(1)} points
+   Current: **${g.current.toFixed(1)}%** → Target: **${g.target}%** (5-star threshold)
+   Weight in Overall Score: ${g.weight}%
+
+   **SPECIFIC ACTIONS FOR ${name.toUpperCase()}:**
+${g.specificActions.map(action => `   • ${action}`).join('\n')}
+
+   ⏱️ Timeline: ${g.timeline}
+   💰 Investment: ${g.investment}
+`).join('\n')}
+
+---
+
+**PHASED IMPROVEMENT ROADMAP FOR ${name.toUpperCase()}**
+
+**PHASE 1: FOUNDATION (Weeks 1-4)**
+
+${gaps.length > 0 ? `
+Focus Area: **${gaps[0].metric}** (Highest Impact)
+
+Week 1:
+• Conduct baseline audit of current ${gaps[0].metric.toLowerCase()} performance
+• Identify top 3 root causes for gaps (staffing? process? documentation? training?)
+• Assign an executive sponsor and project lead
+• Set up daily tracking dashboard
+
+Week 2-3:
+• Implement quick wins from action list above
+• Begin staff training on new protocols
+• Create job aids and checklists
+• Daily huddles to review progress
+
+Week 4:
+• Measure improvement from baseline
+• Adjust approach based on what's working
+• Celebrate early wins to build momentum
+• Begin Phase 2 planning
+` : ''}
+
+**PHASE 2: ACCELERATION (Weeks 5-12)**
+
+${gaps.length > 1 ? `
+Expand to: **${gaps[1].metric}** while sustaining ${gaps[0].metric}
+
+• Deploy second priority improvement protocols
+• Cross-train staff on multiple improvement areas
+• Implement peer accountability systems
+• Weekly quality review meetings
+• Monthly progress reporting to leadership
+` : 'Continue deepening Phase 1 improvements'}
+
+**PHASE 3: OPTIMIZATION (Months 4-6)**
+
+${gaps.length > 2 ? `
+Address remaining gaps: ${gaps.slice(2).map(g => g.metric).join(', ')}
+
+• Refine all processes based on lessons learned
+• Build sustainability into daily operations
+• Develop internal QI expertise
+• Prepare for next CAHPS survey cycle
+` : 'Polish and sustain all improvements'}
+
+**PHASE 4: EXCELLENCE (Months 6-12)**
+
+• Achieve and sustain 5-star metrics
+• Build continuous improvement culture
+• Document best practices for scalability
+• Train internal quality champions
+• Prepare for ongoing excellence
+
+---
+
+**INVESTMENT SUMMARY FOR ${name.toUpperCase()}**
+
+| Category | Estimated Cost |
+|----------|---------------|
+| Training & Education | $15,000 - $30,000 |
+| Process Improvement | $10,000 - $20,000 |
+| Technology/Tools | $5,000 - $15,000 |
+| Staffing Adjustments | $20,000 - $50,000/year |
+| Consulting Support | $15,000 - $35,000 |
+| **TOTAL YEAR 1** | **$65,000 - $150,000** |
+
+**ROI JUSTIFICATION:**
+• Higher referral rates from improved reputation (est. 10-15% increase)
+• Premium positioning in market (${provider.is_con_state ? 'especially important in this CON state' : 'competitive differentiation'})
+• Reduced survey risk and compliance costs
+• Enhanced valuation multiple for future M&A (5-star = +15-25% premium)
+• Staff satisfaction and retention improvement
+
+---
+
+**KEY SUCCESS FACTORS FOR ${name}**
+
+✅ **Leadership Commitment** - Administrator and Medical Director must champion quality daily
+✅ **Staff Engagement** - Front-line staff must understand WHY each measure matters
+✅ **Data Visibility** - Real-time dashboards so everyone knows current performance
+✅ **Accountability** - Clear ownership for each metric with consequences
+✅ **Celebration** - Recognize and reward progress, not just final achievement
+
+---
+
+**TIMELINE TO 5 STARS: ${timeEstimate.toUpperCase()}**
+
+This is achievable if ${name} commits to:
+1. Executive sponsorship at Administrator level
+2. Dedicated quality improvement resources
+3. Weekly progress reviews
+4. Rapid PDSA cycles (Plan-Do-Study-Act)
+5. No tolerance for backsliding
+
+---
+
+**IMMEDIATE NEXT STEPS FOR ${name}**
+
+1. **This Week:** Share this analysis with leadership team
+2. **Next Week:** Conduct gap root cause analysis
+3. **Week 3:** Launch Phase 1 improvement initiatives
+4. **Week 4:** First progress review and course correction
+
+Would you like me to dive deeper into any specific measure or provide detailed protocols for ${gaps[0]?.metric || 'a specific area'}?`;
+  }
 
   // Full analysis when asking about the provider
   if (lowerQuery.includes('analyze') || lowerQuery.includes('analysis') ||
@@ -437,155 +816,125 @@ Would you like a detailed term sheet framework for this acquisition?`;
 
   // Improvement questions
   if (lowerQuery.includes('improve') || lowerQuery.includes('better') || lowerQuery.includes('action') ||
-      lowerQuery.includes('strategy') || lowerQuery.includes('plan') || lowerQuery.includes('fix')) {
+      lowerQuery.includes('strategy') || lowerQuery.includes('plan') || lowerQuery.includes('fix') ||
+      lowerQuery.includes('increase') || lowerQuery.includes('boost') || lowerQuery.includes('raise')) {
 
-    // Find the weakest areas
-    const metrics = [
-      { name: 'HCI', score: provider.hci_score, target: 85 },
-      { name: 'HVLDL', score: provider.hvldl_score, target: 90 },
-      { name: 'Communication', score: provider.communication_score, target: 85 },
-      { name: 'Overall Rating', score: provider.overall_rating_score, target: 85 },
-      { name: 'Recommend', score: provider.willing_recommend_score, target: 85 },
-    ].filter(m => m.score !== null).sort((a, b) => (a.score || 0) - (b.score || 0));
+    const gaps = calculateProviderGaps(provider);
 
-    const weakest = metrics[0];
-    const second = metrics[1];
+    if (gaps.length === 0) {
+      return `**${name} - Quality Improvement Analysis**
 
-    return `**Improvement Action Plan: ${name}**
+Based on available data, ${name} is performing well across measured quality dimensions.
 
-**Current Classification:** ${classification}
-**Target:** ${classification === 'GREEN' ? 'Maintain excellence' : classification === 'YELLOW' ? 'Move to GREEN' : 'Rapid quality improvement'}
+**Current Strengths:**
+- Overall Score: ${provider.overall_score ?? 'N/A'}/100
+- HCI: ${provider.hci_score ?? 'N/A'}%
+- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
+- Classification: ${classification}
+
+**Maintenance Strategy:**
+1. Sustain current protocols without complacency
+2. Monitor metrics monthly for any early decline
+3. Invest in staff retention to maintain quality
+4. Document best practices for consistency
+5. Build culture of continuous improvement
+
+Would you like a detailed 5-star maintenance plan?`;
+    }
+
+    return `**${name} - Targeted Improvement Action Plan**
+
+**CURRENT POSITION**
+📊 Overall Score: ${provider.overall_score ?? 'N/A'}/100
+🏷️ Classification: ${classification}
+📍 Location: ${provider.city}, ${provider.state}
 
 ---
 
-**PRIORITY IMPROVEMENT AREAS**
+**PRIORITY IMPROVEMENT AREAS FOR ${name.toUpperCase()}**
 
-Based on ${name}'s current metrics, here are the prioritized improvement opportunities:
+${gaps.slice(0, 4).map((g, i) => `
+**${i === 0 ? '🔴 #1 CRITICAL' : i === 1 ? '🟠 #2 HIGH' : i === 2 ? '🟡 #3 MEDIUM' : '🔵 #4 STANDARD'}: ${g.metric}**
 
-${weakest ? `
-**#1 Priority: ${weakest.name}**
-Current: ${weakest.score}% | Target: ${weakest.target}% | Gap: ${weakest.target - (weakest.score || 0)} points
+Current: **${g.current.toFixed(1)}%** | Target: **${g.target}%** | Gap: **${g.gap.toFixed(1)} points**
+Impact Weight: ${g.weight}% of overall score
 
-${weakest.name === 'HCI' ? `
-**Hospice Care Index Action Plan:**
+**SPECIFIC ACTIONS FOR ${name}:**
+${g.specificActions.slice(0, 5).map(action => `• ${action}`).join('\n')}
 
-1. **Timeliness of Care (30 days)**
-   - Implement same-day admission visits
-   - Create admission readiness checklists
-   - Pre-schedule comprehensive assessments
-   - Track time-to-first-visit metric daily
+⏱️ **Timeline:** ${g.timeline}
+💰 **Investment:** ${g.investment}
 
-2. **Pain Assessment (30 days)**
-   - Standardize pain assessment tool usage
-   - Train all staff on pain scales
-   - Implement PRN documentation reminders
-   - Audit 100% of charts monthly
+---`).join('\n')}
 
-3. **Dyspnea Screening (30 days)**
-   - Add dyspnea to admission checklist
-   - Create standing orders for dyspnea management
-   - Train on breathlessness assessment tools
+**${name.toUpperCase()} - 90-DAY IMPROVEMENT CALENDAR**
 
-4. **Comprehensive Assessment (60 days)**
-   - Calendar comprehensive assessments
-   - Supervisor review within 24 hours
-   - Create assessment completion dashboards
-   - Weekly compliance reports
+**WEEKS 1-2: FOUNDATION**
+${gaps[0] ? `
+□ Day 1-3: Assemble improvement team, assign executive sponsor
+□ Day 4-7: Complete baseline audit of ${gaps[0].metric}
+□ Day 8-10: Root cause analysis (staffing? process? training? documentation?)
+□ Day 11-14: Finalize action plan, set daily/weekly targets
+□ Begin daily huddles focused on priority metrics
+` : ''}
 
-5. **Documentation Excellence (Ongoing)**
-   - EHR template optimization
-   - Real-time documentation (at bedside)
-   - Quality assurance review process
-   - Peer chart audits monthly
+**WEEKS 3-4: QUICK WINS**
+${gaps[0] ? `
+□ Deploy first 3 actions from ${gaps[0].metric} list
+□ Create visual dashboards visible to all staff
+□ Implement daily tracking and reporting
+□ Begin staff training sessions
+□ First progress review meeting
+` : ''}
 
-**Expected Outcome:** 10-15 point improvement in 90 days
-` : weakest.name === 'HVLDL' ? `
-**Hospice Visits in Last Days of Life Action Plan:**
+**WEEKS 5-8: ACCELERATION**
+${gaps[0] && gaps[1] ? `
+□ Sustain ${gaps[0].metric} improvements
+□ Begin ${gaps[1].metric} action items
+□ Cross-train staff on new protocols
+□ Peer chart audits for accountability
+□ Mid-point progress review
+` : ''}
 
-1. **Predictive Identification (Immediate)**
-   - Train staff on death-imminent indicators
-   - Daily census review for active phase patients
-   - Create "imminent" flags in EHR
-   - Twice-daily care coordinator huddles
-
-2. **Coverage Protocol (30 days)**
-   - 24/7 on-call RN availability
-   - Weekend/holiday visit schedules
-   - Per-diem pool for surge coverage
-   - Backup staff call lists
-
-3. **Visit Scheduling (30 days)**
-   - Auto-schedule daily visits for imminent patients
-   - Minimum 2 visits/day in last 3 days
-   - MSW visit in final 72 hours
-   - Chaplain engagement protocol
-
-4. **Family Communication (30 days)**
-   - Proactive "what to expect" conversations
-   - Daily family updates protocol
-   - After-hours family callback system
-
-5. **Monitoring (Ongoing)**
-   - Weekly HVLDL metric tracking
-   - Post-death chart review
-   - Staff feedback and coaching
-
-**Expected Outcome:** 15-20 point improvement in 60 days
-` : `
-**${weakest.name} Improvement Plan:**
-
-1. **Assessment (Week 1-2)**
-   - Root cause analysis of current gaps
-   - Staff surveys on barriers
-   - Process mapping current workflows
-
-2. **Quick Wins (Week 2-4)**
-   - Training on communication best practices
-   - Family engagement protocols
-   - Feedback loop implementation
-
-3. **Sustained Improvement (Month 2-3)**
-   - Regular performance monitoring
-   - Coaching and recognition programs
-   - Process refinement based on data
-
-**Expected Outcome:** 8-12 point improvement in 90 days
-`}
-` : 'No metrics available for prioritization'}
-
-${second ? `
-**#2 Priority: ${second.name}**
-Current: ${second.score}% | Target: ${second.target}% | Gap: ${second.target - (second.score || 0)} points
-
-This should be addressed after initial progress on Priority #1.
+**WEEKS 9-12: OPTIMIZATION**
+${gaps.length > 2 ? `
+□ Address remaining gaps: ${gaps.slice(2).map(g => g.metric).join(', ')}
+□ Refine processes based on lessons learned
+□ Build sustainability into daily operations
+□ Prepare for next measurement period
+□ Final progress review and next phase planning
 ` : ''}
 
 ---
 
-**IMPLEMENTATION TIMELINE**
+**TOTAL INVESTMENT ESTIMATE FOR ${name}**
 
-| Phase | Timeline | Focus | Expected Impact |
-|-------|----------|-------|-----------------|
-| Stabilize | Weeks 1-4 | Quick wins, stop deterioration | Prevent further decline |
-| Improve | Months 2-3 | Systematic improvements | 10-15 point gains |
-| Sustain | Months 4-6 | Lock in gains, culture change | Rating improvement |
-| Excel | Months 6-12 | Best-in-class operations | GREEN classification |
+| Category | Estimated Range |
+|----------|-----------------|
+| Training & Education | $10,000 - $25,000 |
+| Process Improvement | $5,000 - $15,000 |
+| Staffing Adjustments | $15,000 - $40,000 |
+| Technology/Tools | $3,000 - $10,000 |
+| **TOTAL 90-DAY** | **$33,000 - $90,000** |
 
----
-
-**INVESTMENT REQUIRED**
-
-- **Training:** $5,000-15,000 (staff education)
-- **Technology:** $10,000-25,000 (EHR optimization, dashboards)
-- **Staffing:** $25,000-75,000/year (coverage improvements)
-- **Consulting:** $15,000-40,000 (QI expertise)
-
-**Total Year 1:** $55,000-155,000
-**ROI:** 3-5x through improved referrals, reduced compliance risk
+**EXPECTED ROI:**
+• ${gaps[0] ? `${gaps[0].metric}: ${gaps[0].gap > 10 ? '12-18' : '8-12'} point improvement` : ''}
+• Improved referral relationships
+• Reduced survey risk
+• Enhanced staff morale
+• Better family satisfaction
 
 ---
 
-Would you like detailed protocols for any specific improvement area?`;
+**IMMEDIATE NEXT STEP FOR ${name}**
+
+**This week, ${name} should:**
+1. Assign an executive sponsor for quality improvement
+2. ${gaps[0] ? `Pull last 30 days of ${gaps[0].metric.toLowerCase()} data for baseline` : 'Conduct quality audit'}
+3. Schedule kickoff meeting with clinical leadership
+4. Communicate improvement goals to all staff
+
+Would you like me to provide detailed protocols for ${gaps[0]?.metric || 'any specific measure'}?`;
   }
 
   // Due diligence questions
@@ -1057,10 +1406,10 @@ function getQuickActions(pathname: string, provider: ProviderData | null): Quick
   // Provider-specific quick actions
   if (provider && pathname.startsWith('/provider/')) {
     return [
+      { label: '5-Star Path', prompt: `How can ${provider.provider_name} get to 5-star status?`, icon: <Star className="w-4 h-4" /> },
       { label: 'Full Analysis', prompt: 'Give me a comprehensive analysis of this provider', icon: <BarChart3 className="w-4 h-4" /> },
       { label: 'Valuation', prompt: 'What is the estimated valuation for this hospice?', icon: <DollarSign className="w-4 h-4" /> },
       { label: 'Improve', prompt: 'Create an improvement action plan for this provider', icon: <TrendingUp className="w-4 h-4" /> },
-      { label: 'Due Diligence', prompt: 'Generate a due diligence checklist for this acquisition', icon: <FileText className="w-4 h-4" /> },
     ];
   }
 
