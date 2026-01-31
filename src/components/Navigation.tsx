@@ -107,9 +107,9 @@ export function Navigation() {
             </div>
             <div>
               <h1 className="font-[family-name:var(--font-display)] font-bold text-lg leading-tight">
-                My 5 Star Report
+                Hospice Tracker
               </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">Hospice Quality Intelligence</p>
+              <p className="text-xs text-[var(--color-text-muted)]">M&A Intelligence Platform</p>
             </div>
           </Link>
 

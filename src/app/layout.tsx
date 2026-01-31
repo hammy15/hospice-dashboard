@@ -5,18 +5,18 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "My 5 Star Report | Hospice Quality Intelligence",
-  description: "Comprehensive hospice quality ratings, 5-star analysis, and M&A intelligence platform.",
-  keywords: ["hospice", "5-star", "quality rating", "CMS", "CAHPS", "M&A", "healthcare"],
+  title: "Hospice Tracker | M&A Intelligence Platform",
+  description: "Real-time hospice acquisition intelligence. Track targets, analyze markets, and close deals faster.",
+  keywords: ["hospice", "M&A", "acquisition", "healthcare", "private equity", "due diligence"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "My 5 Star Report",
+    title: "Hospice Tracker",
   },
   openGraph: {
-    title: "My 5 Star Report",
-    description: "Comprehensive hospice quality ratings and 5-star analysis platform",
+    title: "Hospice Tracker",
+    description: "Real-time hospice acquisition intelligence platform",
     type: "website",
   },
 };

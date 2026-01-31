@@ -1845,7 +1845,7 @@ export function PhillAssistant() {
                 <div>
                   <h3 className="font-semibold flex items-center gap-1">
                     Phill
-                    <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded ml-1">EXPERT v2.1</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-white/20 rounded ml-1">EXPERT</span>
                   </h3>
                   <p className="text-xs text-white/80">
                     {provider ? `Analyzing ${provider.provider_name.substring(0, 25)}...` : 'M&A Intelligence Consultant'}
