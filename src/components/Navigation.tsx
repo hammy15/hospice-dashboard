@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Target, MapPin, List, Database, Sun, Moon, Star,
   ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3,
   Building2, Sliders, Mail, User, Briefcase, Users, Calculator,
-  GitCompare, PieChart, Download, Shield, FileText, Play, DollarSign
+  GitCompare, PieChart, Download, Shield, FileText, Play, DollarSign,
+  Activity
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from './AuthProvider';
@@ -45,6 +46,7 @@ const toolsItems = [
   { href: '/valuation', label: 'Valuation', icon: Calculator, section: 'analysis' },
   { href: '/compare', label: 'Compare', icon: GitCompare, section: 'analysis' },
   { href: '/reports', label: 'Reports', icon: FileText, section: 'analysis' },
+  { href: '/quality-measures', label: 'Quality Measures', icon: Activity, section: 'analysis' },
   // Opportunity Finders
   { href: '/owner-carryback', label: 'Owner Carry-Back', icon: DollarSign, section: 'opportunities' },
   { href: '/scoring', label: 'Custom Scoring', icon: Sliders, section: 'opportunities' },
