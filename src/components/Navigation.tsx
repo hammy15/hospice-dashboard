@@ -57,6 +57,7 @@ const toolsItems = [
   // Export
   { href: '/export', label: 'Export', icon: Download, section: 'export' },
   // Help
+  { href: '/learn', label: 'Knowledge Base', icon: Activity, section: 'help' },
   { href: '/faq', label: 'FAQ & Help', icon: HelpCircle, section: 'help' },
 ];
 

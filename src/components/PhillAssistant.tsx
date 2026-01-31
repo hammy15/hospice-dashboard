@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, X, Send, Sparkles, ChevronDown,
   Activity, Star, Target, HelpCircle, Lightbulb,
-  TrendingUp, AlertTriangle, CheckCircle, Loader2
+  TrendingUp, AlertTriangle, CheckCircle, Loader2,
+  BookOpen, Calculator, Shield, Users, FileText
 } from 'lucide-react';
+import FiveStarDataset, { queryKnowledge, getActionPlan, getImprovementRecommendations } from '@/lib/knowledge';
 
 interface Message {
   id: string;
@@ -22,345 +24,406 @@ interface QuickAction {
   icon: React.ReactNode;
 }
 
-// Knowledge base for Phill - context-aware responses
-const phillKnowledge = {
-  qualityMeasures: {
-    overview: `Quality Measures (QMs) are standardized metrics CMS uses to evaluate nursing home care quality. There are 13 key measures:
-
-**Long-Stay Measures (8):**
-1. Falls with Major Injury - Weight: 3.0 (HIGH impact)
-2. Pressure Ulcers (High Risk) - Weight: 2.5
-3. UTIs - Weight: 2.0
-4. Antipsychotic Medication Use - Weight: 1.5
-5. Physical Restraints - Weight: 1.5
-6. Catheter Use - Weight: 1.5
-7. ADL Decline - Weight: 1.0
-8. Depressive Symptoms - Weight: 1.0
-
-**Short-Stay Measures (5):**
-1. Pressure Ulcers - Weight: 2.5
-2. Falls with Major Injury - Weight: 2.0
-3. Functional Improvement - Weight: 2.0
-4. Rehospitalizations - Weight: 1.5
-5. ED Visits - Weight: 1.5
-
-Higher weights mean bigger impact on overall star rating.`,
-
-    falls: `**Falls with Major Injury** is the highest-weighted QM (3.0).
-
-**Star Thresholds:**
-- 5 Stars: < 0.5%
-- 4 Stars: 0.5-1.0%
-- 3 Stars: 1.0-2.0%
-- 2 Stars: 2.0-3.5%
-- 1 Star: > 3.5%
-
-**Improvement Strategies:**
-1. Implement hourly rounding protocols
-2. Install bed/chair sensor alarms
-3. Review medications monthly for fall-risk drugs (benzodiazepines, opioids, antihypertensives)
-4. Ensure adequate lighting in all areas
-5. Require non-slip footwear for all residents
-6. Physical therapy for balance training
-7. Hip protectors for high-risk residents`,
-
-    pressureUlcers: `**Pressure Ulcers (High Risk)** - Weight: 2.5
-
-**Star Thresholds:**
-- 5 Stars: < 2.0%
-- 4 Stars: 2.0-4.0%
-- 3 Stars: 4.0-7.0%
-- 2 Stars: 7.0-10.0%
-- 1 Star: > 10.0%
-
-**Improvement Strategies:**
-1. Reposition immobile residents every 2 hours
-2. Use pressure-redistributing mattresses and cushions
-3. Keep skin clean and dry
-4. Ensure adequate nutrition (protein, vitamin C, zinc)
-5. Daily skin assessments
-6. Document turning schedules
-7. Use heel protectors and specialty beds for high-risk patients`,
-
-    utis: `**Urinary Tract Infections (UTIs)** - Weight: 2.0
-
-**Star Thresholds:**
-- 5 Stars: < 1.5%
-- 4 Stars: 1.5-3.0%
-- 3 Stars: 3.0-5.0%
-- 2 Stars: 5.0-7.5%
-- 1 Star: > 7.5%
-
-**Improvement Strategies:**
-1. Minimize catheter use - remove as soon as medically appropriate
-2. Maintain proper catheter care protocols
-3. Ensure adequate hydration (8+ glasses daily)
-4. Proper perineal hygiene
-5. Cranberry supplementation where appropriate
-6. Monitor for early symptoms
-7. Staff education on infection prevention`,
-
-    antipsychotics: `**Antipsychotic Medication Use** - Weight: 1.5
-
-**Star Thresholds:**
-- 5 Stars: < 10%
-- 4 Stars: 10-15%
-- 3 Stars: 15-22%
-- 2 Stars: 22-30%
-- 1 Star: > 30%
-
-**Improvement Strategies:**
-1. Implement behavioral interventions first
-2. Use person-centered dementia care approaches
-3. Gradual dose reduction protocols
-4. Regular medication reviews by pharmacist
-5. Staff training on non-pharmacological interventions
-6. Document behaviors and alternatives tried
-7. Consult with geriatric psychiatry when needed`,
-  },
-
-  starRatings: {
-    overview: `**CMS 5-Star Rating System**
-
-The overall rating combines three components:
-
-1. **Health Inspections** (Most heavily weighted)
-   - Based on annual surveys and complaint investigations
-   - Includes scope and severity of deficiencies
-
-2. **Quality Measures** (13 measures)
-   - Long-stay and short-stay metrics
-   - Updated quarterly
-
-3. **Staffing**
-   - RN hours per resident day
-   - Total nursing hours
-
-**Rating Distribution:**
-- 5 Stars: Top 10% performers
-- 4 Stars: Next 20% (10-30th percentile)
-- 3 Stars: Middle 40% (30-70th percentile)
-- 2 Stars: Next 20% (70-90th percentile)
-- 1 Star: Bottom 10%`,
-
-    improving: `**Strategies to Improve Star Ratings:**
-
-**Quick Wins (1-3 months):**
-1. Focus on highest-weighted QMs first
-2. Reduce antipsychotic use through care conferences
-3. Implement fall prevention program
-4. Catheter removal initiative
-
-**Medium-Term (3-6 months):**
-1. Staff training on QM documentation
-2. Pressure ulcer prevention protocols
-3. UTI reduction program
-4. Increase RN staffing if below thresholds
-
-**Long-Term (6-12 months):**
-1. Culture change to person-centered care
-2. Quality improvement infrastructure
-3. Prepare for annual survey
-4. Address recurring deficiency patterns`,
-  },
-
-  mna: {
-    valuation: `**Hospice Valuation Methods:**
-
-1. **Revenue Multiple: 1.0-1.5x**
-   - Premium for 4-5 star ratings
-   - Discount for compliance issues
-
-2. **EBITDA Multiple: 4-6x**
-   - Higher for profitable, growing agencies
-   - Lower for turnaround situations
-
-3. **ADC Multiple: $15,000-$25,000 per ADC**
-   - Sweet spot: ADC 20-60 for tuck-ins
-   - Platform candidates: ADC 60+
-
-**Value Drivers:**
-- Star ratings (4-5 stars = premium)
-- CON state location (regulatory moat)
-- Clean compliance record
-- Independent ownership (easier negotiation)
-- Growth market demographics`,
-
-    ownerCarryBack: `**Owner Carry-Back Financing:**
-
-Seller financing is common in hospice M&A. Ideal candidates:
-- Single or simple ownership structure
-- ADC 20-60 (not too large for personal deal)
-- Non-PE backed (no institutional sellers)
-- Aging owner looking for liquidity
-- Independent operator (not chain)
-
-**Typical Terms:**
-- 10-20% of purchase price as seller note
-- 5-7 year term
-- Interest rate: 5-8%
-- Often subordinated to senior debt
-
-Use our Owner Carry-Back page to find prime candidates.`,
-
-    conStates: `**Certificate of Need (CON) States:**
-
-CON states require regulatory approval for new hospice agencies, creating barriers to entry.
-
-**CON States for Hospice:**
-Washington, Oregon, Montana, Hawaii, Georgia, North Carolina, South Carolina, Kentucky, Tennessee, and others.
-
-**Why CON Matters:**
-1. Protects existing operators from competition
-2. More predictable market share
-3. Premium valuations (10-20% higher)
-4. Regulatory moat for acquirers
-
-**Strategy:**
-Focus on GREEN targets in CON states for best risk-adjusted opportunities.`,
-  },
-
-  platform: {
-    navigation: `**Platform Navigation:**
-
-- **Dashboard**: Overview of all targets and metrics
-- **Top 10**: Best acquisition opportunities
-- **Search**: Advanced filtering by any criteria
-- **Map**: Geographic visualization
-- **Quality Measures**: QM drill-down and What-If simulator
-- **Deal Pipeline**: Track opportunities
-- **Valuation**: Calculate enterprise value
-- **Reports**: Generate PDF due diligence reports
-- **Export**: Download data as CSV/Excel
-
-**Pro Tip:** Use the Demo button in the nav to take a guided tour.`,
-
-    whatIf: `**What-If Simulator:**
-
-Located on the Quality Measures page, the simulator lets you:
-
-1. Adjust individual QM performance with sliders
-2. See real-time projected star rating changes
-3. Identify which improvements have biggest impact
-4. Model improvement scenarios before investing
-
-**How to Use:**
-1. Go to Quality Measures page
-2. Select "What-If Simulator" tab
-3. Adjust sliders for each measure
-4. Watch the projected rating update
-5. Prioritize improvements with highest ROI`,
-  },
-};
-
-// Generate contextual responses
+// Generate comprehensive responses using the knowledge base
 function generateResponse(input: string, pathname: string): string {
   const lowerInput = input.toLowerCase();
 
-  // Quality Measures questions
-  if (lowerInput.includes('quality measure') || lowerInput.includes('qm')) {
-    if (lowerInput.includes('fall')) return phillKnowledge.qualityMeasures.falls;
-    if (lowerInput.includes('pressure') || lowerInput.includes('ulcer')) return phillKnowledge.qualityMeasures.pressureUlcers;
-    if (lowerInput.includes('uti') || lowerInput.includes('urinary')) return phillKnowledge.qualityMeasures.utis;
-    if (lowerInput.includes('antipsychotic') || lowerInput.includes('medication')) return phillKnowledge.qualityMeasures.antipsychotics;
-    return phillKnowledge.qualityMeasures.overview;
+  // Health Inspections
+  if (lowerInput.includes('health inspection') || lowerInput.includes('survey') || lowerInput.includes('deficien')) {
+    const domain = FiveStarDataset.Domains.HealthInspections;
+    return `**Health Inspections Domain**
+
+The Health Inspections domain is the **foundation** of the overall star rating (40% implicit weight).
+
+**Data Source:** State surveys via CASPER system
+
+**How Deficiencies Are Scored:**
+${domain.CalculationSteps[0].Examples?.slice(0, 5).map(e => `- Level ${e.Level}: ${e.Description} = ${e.Points} points`).join('\n')}
+
+**Calculation Formula:**
+\`Total = (Cycle1 × 0.6) + (Cycle2 × 0.3) + (Cycle3 × 0.1)\`
+
+**Star Cut Points (Q4 2023):**
+${domain.StarCutPoints.map(s => `- ${s.Stars} Stars: ${s.ScoreRange} points`).join('\n')}
+
+**Key Facts:**
+- Abuse citations double the point value
+- Repeat deficiencies add 50% extra points
+- Substantiated complaints count at full weight
+
+Would you like specific strategies to reduce deficiencies?`;
   }
 
-  // Star rating questions
-  if (lowerInput.includes('star') || lowerInput.includes('rating')) {
-    if (lowerInput.includes('improve') || lowerInput.includes('increase')) return phillKnowledge.starRatings.improving;
-    return phillKnowledge.starRatings.overview;
+  // Staffing Domain
+  if (lowerInput.includes('staff') && (lowerInput.includes('domain') || lowerInput.includes('rating') || lowerInput.includes('hprd') || lowerInput.includes('hour'))) {
+    const domain = FiveStarDataset.Domains.Staffing;
+    return `**Staffing Domain**
+
+**Data Source:** PBJ (Payroll-Based Journal) quarterly submissions (mandatory since 2016)
+
+**Key Metrics Tracked:**
+${domain.Metrics.map(m => `- ${m}`).join('\n')}
+
+**How HPRD is Calculated:**
+\`Adjusted HPRD = Actual Hours / Expected Hours (case-mix adjusted)\`
+
+**Star Thresholds:**
+${domain.StarThresholds.map(s => `- ${s.Stars} Stars: RN ${s.RNPoints} pts, Total ${s.TotalPoints} pts`).join('\n')}
+
+**2023 Rule Changes:**
+${domain.Post2023Rules.map(r => `- ${r}`).join('\n')}
+
+**Pro Tips:**
+1. Weekend RN staffing is now required for 4+ stars
+2. High turnover (>60%) can cost you a star
+3. Data is audited - accuracy matters
+
+Would you like strategies to improve staffing scores?`;
   }
 
-  // Valuation questions
-  if (lowerInput.includes('valuation') || lowerInput.includes('value') || lowerInput.includes('worth') || lowerInput.includes('multiple')) {
-    return phillKnowledge.mna.valuation;
+  // Falls QM
+  if (lowerInput.includes('fall')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Falls'));
+    const actions = getActionPlan('falls');
+    return `**Falls with Major Injury** - Weight: ${measure?.Weight} (HIGHEST IMPACT)
+
+This is the **most heavily weighted** quality measure. Improving falls can significantly boost your star rating.
+
+**Star Thresholds (Long-Stay):**
+- 5 Stars: ${measure?.Thresholds.FiveStar}
+- 4 Stars: ${measure?.Thresholds.FourStar}
+- 3 Stars: ${measure?.Thresholds.ThreeStar}
+- 2 Stars: ${measure?.Thresholds.TwoStar}
+- 1 Star: ${measure?.Thresholds.OneStar}
+
+**National Average:** ${measure?.NationalAverage}
+
+**Action Plan to Reduce Falls:**
+${actions.map((a, i) => a).join('\n')}
+
+**Quick Wins:**
+- Hourly rounding protocols (FREE)
+- Medication reviews for fall-risk drugs
+- Non-slip footwear requirement
+- Low beds for high-risk residents`;
   }
 
-  // Owner carry-back
-  if (lowerInput.includes('carry') || lowerInput.includes('seller') || lowerInput.includes('financing')) {
-    return phillKnowledge.mna.ownerCarryBack;
+  // Pressure Ulcers QM
+  if (lowerInput.includes('pressure') || lowerInput.includes('ulcer') || lowerInput.includes('wound')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Pressure'));
+    const actions = getActionPlan('pressure');
+    return `**Pressure Ulcers (High Risk)** - Weight: ${measure?.Weight} (HIGH IMPACT)
+
+**Star Thresholds:**
+- 5 Stars: ${measure?.Thresholds.FiveStar}
+- 4 Stars: ${measure?.Thresholds.FourStar}
+- 3 Stars: ${measure?.Thresholds.ThreeStar}
+- 2 Stars: ${measure?.Thresholds.TwoStar}
+- 1 Star: ${measure?.Thresholds.OneStar}
+
+**National Average:** ${measure?.NationalAverage}
+
+**Action Plan:**
+${actions.map(a => a).join('\n')}
+
+**Key Prevention Strategies:**
+- Repositioning every 2 hours (document it!)
+- Pressure-redistributing surfaces
+- Nutrition optimization (protein, vitamin C, zinc)
+- Daily skin assessments`;
   }
 
-  // CON states
-  if (lowerInput.includes('con') || lowerInput.includes('certificate')) {
-    return phillKnowledge.mna.conStates;
+  // UTI QM
+  if (lowerInput.includes('uti') || lowerInput.includes('urinary') || lowerInput.includes('catheter') && lowerInput.includes('infection')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('UTI'));
+    const actions = getActionPlan('uti');
+    return `**Urinary Tract Infections** - Weight: ${measure?.Weight}
+
+**Star Thresholds:**
+- 5 Stars: ${measure?.Thresholds.FiveStar}
+- 4 Stars: ${measure?.Thresholds.FourStar}
+- 3 Stars: ${measure?.Thresholds.ThreeStar}
+- 2 Stars: ${measure?.Thresholds.TwoStar}
+- 1 Star: ${measure?.Thresholds.OneStar}
+
+**National Average:** ${measure?.NationalAverage}
+
+**Action Plan:**
+${actions.map(a => a).join('\n')}
+
+**Key Strategies:**
+- Minimize catheter use (biggest impact)
+- Remove catheters as soon as possible
+- Proper catheter care protocols
+- Hydration tracking`;
+  }
+
+  // Antipsychotics QM
+  if (lowerInput.includes('antipsychotic') || lowerInput.includes('medication') || lowerInput.includes('psych')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Antipsychotic'));
+    const actions = getActionPlan('antipsychotic');
+    return `**Antipsychotic Medication Use** - Weight: ${measure?.Weight}
+
+**Star Thresholds:**
+- 5 Stars: ${measure?.Thresholds.FiveStar}
+- 4 Stars: ${measure?.Thresholds.FourStar}
+- 3 Stars: ${measure?.Thresholds.ThreeStar}
+- 2 Stars: ${measure?.Thresholds.TwoStar}
+- 1 Star: ${measure?.Thresholds.OneStar}
+
+**National Average:** ${measure?.NationalAverage}
+
+**Note:** Excludes residents with schizophrenia, Huntington's, or Tourette's.
+
+**Action Plan:**
+${actions.map(a => a).join('\n')}
+
+**Non-Pharmacological Alternatives:**
+- Person-centered dementia care
+- Environmental modifications
+- Activity programming
+- Music/art therapy`;
+  }
+
+  // Quality Measures Overview
+  if (lowerInput.includes('quality measure') || lowerInput.includes('qm') || (lowerInput.includes('measure') && lowerInput.includes('list'))) {
+    const qm = FiveStarDataset.Domains.QualityMeasures;
+    return `**CMS Quality Measures Overview**
+
+There are **${qm.TotalMeasures} measures** total (${qm.LongStayMeasures} Long-Stay + ${qm.ShortStayMeasures} Short-Stay).
+
+**Long-Stay Measures (residents >100 days):**
+${qm.LongStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
+
+**Short-Stay Measures (post-acute):**
+${qm.ShortStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
+
+**QM Star Cut Points:**
+${qm.StarCutPoints.map(s => `- ${s.Stars} Stars: ${s.ScoreRange} points`).join('\n')}
+
+**Highest Impact Measures to Focus On:**
+1. Falls with Major Injury (Long-Stay) - Weight 3.0
+2. Pressure Ulcers - Weight 2.5
+3. UTIs - Weight 2.0
+
+Ask me about any specific measure for detailed thresholds and action plans!`;
+  }
+
+  // Star Rating Improvement
+  if (lowerInput.includes('improve') && (lowerInput.includes('star') || lowerInput.includes('rating'))) {
+    const strategies = FiveStarDataset.ImprovementStrategies.EffectivePaths;
+    return `**How to Improve Star Ratings**
+
+${strategies.map(s => `**${s.FromTo} Stars:**
+Timeline: ${s.Timeline}
+Key Actions:
+${s.KeyActions.slice(0, 4).map(a => `- ${a}`).join('\n')}
+`).join('\n')}
+
+**High-ROI Quick Wins:**
+1. MDS coding audit (errors drop scores 10-20%)
+2. Fall prevention protocols (highest-weight QM)
+3. Catheter removal initiative
+4. Antipsychotic reduction program
+
+**Evidence:** Per AHCA data, a 1-star improvement yields $50K+ annual revenue from better referrals.
+
+What's your current star rating? I can give specific recommendations.`;
+  }
+
+  // Cost-effective improvements
+  if (lowerInput.includes('cost') || lowerInput.includes('budget') || lowerInput.includes('cheap') || lowerInput.includes('afford')) {
+    const tactics = FiveStarDataset.ImprovementStrategies.CostEffectiveTactics;
+    return `**Cost-Effective Improvement Strategies**
+
+**Low-Cost (Under $10K/year):**
+${tactics[0].Examples.map(e => `- ${e}`).join('\n')}
+ROI: ${tactics[0].ROI}
+
+**Medium-Cost ($10K-$50K/year):**
+${tactics[1].Examples.map(e => `- ${e}`).join('\n')}
+
+**Avoid These Pitfalls:**
+${FiveStarDataset.ImprovementStrategies.AvoidPitfalls.map(p => `- ${p}`).join('\n')}
+
+**Free Resources:**
+- CMS webinars and YouTube tutorials
+- QIO technical assistance (free consulting)
+- AHCA Quality Initiative materials
+
+**ROI Fact:** Staffing investments return 2-3x via lower penalties and reduced turnover costs.`;
+  }
+
+  // Overall Rating Calculation
+  if (lowerInput.includes('overall') || lowerInput.includes('calculate') || (lowerInput.includes('how') && lowerInput.includes('star'))) {
+    const overall = FiveStarDataset.Domains.Overall;
+    return `**Overall Star Rating Calculation**
+
+The overall rating combines all three domains:
+
+**Calculation Steps:**
+${overall.CalculationMethod.map(s => s).join('\n')}
+
+**Point Conversion:**
+${overall.PointConversion.map(p => `- ${p.TotalPoints} points = ${p.OverallStars} stars`).join('\n')}
+
+**Important Caps:**
+${overall.Caps.map(c => `- ${c}`).join('\n')}
+
+**Key Insight:** Health Inspections is the BASE - you can only go up from there based on Staffing and QM performance.
+
+Would you like help with a specific domain?`;
+  }
+
+  // Resources
+  if (lowerInput.includes('resource') || lowerInput.includes('guide') || lowerInput.includes('document') || lowerInput.includes('reference')) {
+    const resources = FiveStarDataset.Resources;
+    return `**CMS Five-Star Resources**
+
+**Official CMS Documents:**
+${resources.OfficialCMS.slice(0, 3).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
+
+**Guides and Tools:**
+${resources.GuidesAndTools.slice(0, 3).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
+
+**Research Studies:**
+${resources.ResearchAndStudies.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
+
+**Training:**
+${resources.TrainingAndWebinars.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
+
+Visit our **/learn** page for a comprehensive walkthrough of the entire system!`;
   }
 
   // What-if simulator
   if (lowerInput.includes('what-if') || lowerInput.includes('simulator') || lowerInput.includes('simulate')) {
-    return phillKnowledge.platform.whatIf;
+    return `**What-If Simulator**
+
+Located on the **Quality Measures page**, the simulator lets you:
+
+1. **Adjust individual QM performance** with sliders
+2. **See real-time projected star changes**
+3. **Identify highest-impact improvements**
+4. **Model scenarios before investing**
+
+**How to Use:**
+1. Go to Quality Measures page (/quality-measures)
+2. Select "What-If Simulator" tab
+3. Adjust sliders for each measure
+4. Watch the projected rating update
+
+**Pro Tip:** Focus on high-weight measures first:
+- Falls with Major Injury (weight: 3.0)
+- Pressure Ulcers (weight: 2.5)
+- UTIs (weight: 2.0)
+
+These give you the biggest bang for your improvement efforts!`;
   }
 
-  // Navigation help
-  if (lowerInput.includes('how') && (lowerInput.includes('find') || lowerInput.includes('use') || lowerInput.includes('navigate'))) {
-    return phillKnowledge.platform.navigation;
+  // Specific star level recommendations
+  const starMatch = lowerInput.match(/(\d)\s*star/);
+  if (starMatch || lowerInput.includes('current') || lowerInput.includes('my rating')) {
+    const starLevel = starMatch ? parseInt(starMatch[1]) : 3;
+    const recs = getImprovementRecommendations(starLevel);
+    return `**Recommendations for ${recs.fromTo}**
+
+**Timeline:** ${recs.timeline}
+
+**Priority Actions:**
+${recs.priorityActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
+
+**Expected ROI:** ${recs.expectedROI}
+
+**Focus Areas:**
+${recs.focus.slice(0, 5).map(f => `- ${f}`).join('\n')}
+
+Would you like details on any specific improvement area?`;
   }
 
   // Context-aware responses based on current page
   if (pathname === '/quality-measures') {
-    return `I see you're on the Quality Measures page! Here you can:
+    return `I see you're on the **Quality Measures page**!
 
-1. **Overview Tab**: See priority improvement areas
-2. **Long-Stay/Short-Stay Tabs**: Drill into each measure
-3. **What-If Simulator**: Model improvements
-4. **Action Plan**: Get specific recommendations
+This page lets you:
+1. **Overview Tab**: See priority improvement areas ranked by impact
+2. **Long-Stay/Short-Stay Tabs**: Drill into each measure with thresholds
+3. **What-If Simulator**: Model improvements in real-time
+4. **Action Plan**: Get specific, actionable recommendations
 
-What would you like to know more about? You can ask me about specific measures like falls, pressure ulcers, or UTIs.`;
+**Quick Tips:**
+- Focus on highest-weight measures first (Falls, Pressure Ulcers)
+- Use the simulator to see projected star changes
+- Each measure has 5+ concrete action steps
+
+What would you like to know more about?`;
+  }
+
+  if (pathname === '/learn') {
+    return `Welcome to the **CMS Five-Star Knowledge Base**!
+
+Here you can learn about:
+- How ratings are calculated
+- Health Inspection scoring methodology
+- Staffing requirements and thresholds
+- All 28 Quality Measures with specific thresholds
+- Improvement strategies and timelines
+- Cost-effective tactics
+
+Use the tabs to explore each domain in depth. Ask me specific questions anytime!`;
   }
 
   if (pathname.startsWith('/provider/')) {
-    return `Looking at a specific provider? I can help you understand:
+    return `Looking at a **specific provider**? I can help you understand:
 
-- **Quality Scores**: What drives their rating
-- **Improvement Opportunities**: Where they can improve
-- **Valuation**: What this provider might be worth
-- **Carry-Back Potential**: Likelihood of seller financing
+- **Quality Scores**: What drives their current rating
+- **Improvement Opportunities**: Where they can gain stars
+- **Valuation Impact**: How stars affect facility value
+- **Benchmarking**: How they compare to peers
 
 What aspect would you like to explore?`;
   }
 
-  if (pathname === '/valuation') {
-    return phillKnowledge.mna.valuation;
-  }
+  // Default comprehensive response
+  return `Hi! I'm **Phill**, your CMS Five-Star expert.
 
-  // Default helpful response
-  return `I'm Phill, your quality measures and M&A assistant! I can help with:
+I have comprehensive knowledge of the entire rating system, including:
 
-**Quality Measures:**
-- Explain any of the 13 QMs
-- Star rating thresholds
-- Improvement strategies
+**Quality Measures (28 total):**
+- All Long-Stay and Short-Stay measures
+- Exact star thresholds for each
+- Specific action plans to improve
 
-**Star Ratings:**
-- How ratings are calculated
-- What drives improvements
-- Quick wins vs long-term strategies
+**Star Rating Calculation:**
+- Health Inspection scoring methodology
+- Staffing requirements and formulas
+- Overall rating computation
 
-**M&A & Valuation:**
-- Valuation multiples
-- Owner carry-back opportunities
-- CON state strategy
+**Improvement Strategies:**
+- Evidence-based paths from 1→5 stars
+- Cost-effective tactics (many free!)
+- ROI data and timelines
 
-**Platform Help:**
-- How to use the What-If Simulator
-- Finding best acquisition targets
-- Navigating the platform
+**Try asking me:**
+- "How do I reduce falls?"
+- "What are the staffing requirements?"
+- "How is the overall rating calculated?"
+- "Give me cost-effective improvement ideas"
+- "Explain pressure ulcer thresholds"
 
-What would you like to know?`;
+Or visit **/learn** for the full knowledge base!`;
 }
 
 // Quick action buttons based on context
 function getQuickActions(pathname: string): QuickAction[] {
   const baseActions: QuickAction[] = [
     {
-      label: 'Quality Measures',
-      prompt: 'Explain quality measures and how they work',
+      label: 'QM Overview',
+      prompt: 'Give me an overview of all quality measures',
       icon: <Activity className="w-4 h-4" />
     },
     {
       label: 'Improve Stars',
-      prompt: 'How can I improve star ratings?',
+      prompt: 'How can I improve star ratings cost-effectively?',
       icon: <Star className="w-4 h-4" />
     },
   ];
@@ -368,19 +431,39 @@ function getQuickActions(pathname: string): QuickAction[] {
   if (pathname === '/quality-measures') {
     return [
       {
-        label: 'What-If Simulator',
-        prompt: 'How do I use the What-If Simulator?',
-        icon: <TrendingUp className="w-4 h-4" />
-      },
-      {
-        label: 'Falls Prevention',
-        prompt: 'How do I reduce falls with major injury?',
+        label: 'Falls Action Plan',
+        prompt: 'Give me the complete action plan to reduce falls',
         icon: <AlertTriangle className="w-4 h-4" />
       },
       {
-        label: 'Quick Wins',
-        prompt: 'What are the quickest ways to improve star ratings?',
-        icon: <Lightbulb className="w-4 h-4" />
+        label: 'What-If Help',
+        prompt: 'How do I use the What-If Simulator?',
+        icon: <Calculator className="w-4 h-4" />
+      },
+      {
+        label: 'QM Thresholds',
+        prompt: 'What are all the star thresholds for quality measures?',
+        icon: <Target className="w-4 h-4" />
+      },
+    ];
+  }
+
+  if (pathname === '/learn') {
+    return [
+      {
+        label: 'Health Inspections',
+        prompt: 'Explain the Health Inspections domain in detail',
+        icon: <Shield className="w-4 h-4" />
+      },
+      {
+        label: 'Staffing',
+        prompt: 'Explain the Staffing domain and HPRD requirements',
+        icon: <Users className="w-4 h-4" />
+      },
+      {
+        label: 'Resources',
+        prompt: 'What CMS resources and guides are available?',
+        icon: <BookOpen className="w-4 h-4" />
       },
     ];
   }
@@ -388,30 +471,14 @@ function getQuickActions(pathname: string): QuickAction[] {
   if (pathname.startsWith('/provider/')) {
     return [
       {
-        label: 'Valuation',
-        prompt: 'How is this provider valued?',
-        icon: <Target className="w-4 h-4" />
+        label: 'Rating Impact',
+        prompt: 'How do star ratings affect facility value?',
+        icon: <TrendingUp className="w-4 h-4" />
       },
       {
-        label: 'Carry-Back',
-        prompt: 'Is this a good owner carry-back candidate?',
-        icon: <Sparkles className="w-4 h-4" />
-      },
-      ...baseActions,
-    ];
-  }
-
-  if (pathname === '/valuation') {
-    return [
-      {
-        label: 'Multiples',
-        prompt: 'What valuation multiples should I use?',
-        icon: <Target className="w-4 h-4" />
-      },
-      {
-        label: 'Seller Financing',
-        prompt: 'Tell me about owner carry-back financing',
-        icon: <Sparkles className="w-4 h-4" />
+        label: 'Quick Wins',
+        prompt: 'What are quick wins to improve star ratings?',
+        icon: <Lightbulb className="w-4 h-4" />
       },
       ...baseActions,
     ];
@@ -420,14 +487,14 @@ function getQuickActions(pathname: string): QuickAction[] {
   return [
     ...baseActions,
     {
-      label: 'CON States',
-      prompt: 'What are CON states and why do they matter?',
-      icon: <Target className="w-4 h-4" />
+      label: 'Calculation',
+      prompt: 'How is the overall star rating calculated?',
+      icon: <Calculator className="w-4 h-4" />
     },
     {
-      label: 'Find Targets',
-      prompt: 'How do I find the best acquisition targets?',
-      icon: <HelpCircle className="w-4 h-4" />
+      label: 'Resources',
+      prompt: 'What resources and guides are available?',
+      icon: <FileText className="w-4 h-4" />
     },
   ];
 }
@@ -472,10 +539,10 @@ export function PhillAssistant() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate typing delay
-    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+    // Simulate typing delay for natural feel
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
 
-    // Generate response
+    // Generate response using knowledge base
     const response = generateResponse(text, pathname);
 
     const assistantMessage: Message = {
@@ -512,11 +579,11 @@ export function PhillAssistant() {
             className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
           >
             <MessageSquare className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 w-5 h-5 bg-emerald-500 rounded-full text-xs font-bold flex items-center justify-center">
+            <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full text-xs font-bold flex items-center justify-center border-2 border-white">
               P
             </span>
             <div className="absolute right-full mr-3 px-3 py-1.5 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <span className="text-sm">Ask Phill</span>
+              <span className="text-sm font-medium">Ask Phill - Five-Star Expert</span>
             </div>
           </motion.button>
         )}
@@ -529,7 +596,7 @@ export function PhillAssistant() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-48px)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+            className="fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-48px)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white">
@@ -539,7 +606,7 @@ export function PhillAssistant() {
                 </div>
                 <div>
                   <h3 className="font-semibold">Phill</h3>
-                  <p className="text-xs text-white/80">Quality Measures Expert</p>
+                  <p className="text-xs text-white/80">CMS Five-Star Expert</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -568,16 +635,18 @@ export function PhillAssistant() {
                   className="overflow-hidden"
                 >
                   {/* Messages */}
-                  <div className="h-[350px] overflow-y-auto p-4 space-y-4">
+                  <div className="h-[400px] overflow-y-auto p-4 space-y-4">
                     {messages.length === 0 ? (
-                      <div className="text-center py-6">
+                      <div className="text-center py-4">
                         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-turquoise-500)]/10 flex items-center justify-center">
                           <Sparkles className="w-8 h-8 text-[var(--color-turquoise-500)]" />
                         </div>
                         <h4 className="font-semibold mb-2">Hi, I'm Phill!</h4>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                          I'm your expert on quality measures, star ratings, and hospice M&A.
-                          Ask me anything!
+                        <p className="text-sm text-[var(--color-text-muted)] mb-1">
+                          Your CMS Five-Star rating expert.
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)] mb-4">
+                          I know all 28 quality measures, star thresholds, and improvement strategies.
                         </p>
 
                         {/* Quick Actions */}
@@ -586,7 +655,7 @@ export function PhillAssistant() {
                             <button
                               key={i}
                               onClick={() => handleSend(action.prompt)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border border-[var(--color-border)]"
                             >
                               {action.icon}
                               {action.label}
@@ -604,7 +673,7 @@ export function PhillAssistant() {
                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                           >
                             <div
-                              className={`max-w-[85%] p-3 rounded-2xl ${
+                              className={`max-w-[90%] p-3 rounded-2xl ${
                                 msg.role === 'user'
                                   ? 'bg-[var(--color-turquoise-500)] text-white rounded-tr-sm'
                                   : 'bg-[var(--color-bg-secondary)] rounded-tl-sm'
@@ -641,7 +710,7 @@ export function PhillAssistant() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Ask Phill anything..."
+                        placeholder="Ask about quality measures, star ratings..."
                         className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:border-[var(--color-turquoise-500)] focus:ring-1 focus:ring-[var(--color-turquoise-500)] transition-colors text-sm"
                       />
                       <button
