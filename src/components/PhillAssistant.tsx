@@ -11,14 +11,11 @@ import {
   DollarSign, Building2, BarChart3, Heart, Brain,
   Zap, Clock, Award, Percent, ArrowRight, MapPin,
   TrendingDown, AlertCircle, ChevronRight, BadgeCheck,
-  Gauge, Info, ThumbsUp, ThumbsDown
+  Gauge, Info, ThumbsUp, ThumbsDown, GraduationCap,
+  ClipboardList, Calendar, CircleCheck, Circle, Play,
+  ChevronUp, Maximize2, Minimize2, RefreshCw
 } from 'lucide-react';
-import FiveStarDataset, {
-  queryKnowledge,
-  getActionPlan,
-  getImprovementRecommendations,
-  searchKnowledge
-} from '@/lib/knowledge';
+import FiveStarDataset from '@/lib/knowledge';
 
 // ============================================
 // PROVIDER CONTEXT FOR PHILL
@@ -30,25 +27,18 @@ interface ProviderData {
   state: string;
   overall_score: number | null;
   quality_score: number | null;
-  ownership_type: string | null;
+  compliance_score: number | null;
+  operational_score: number | null;
+  market_score: number | null;
+  ownership_type_cms: string | null;
   estimated_adc: number | null;
-  // Hospice Quality Measures
-  hci_score: number | null;
-  hci_percentile: number | null;
-  hvldl_score: number | null;
-  timely_care_score: number | null;
-  beliefs_values_score: number | null;
-  communication_score: number | null;
-  training_score: number | null;
-  overall_rating_score: number | null;
-  willing_recommend_score: number | null;
-  // Classification and status
   classification: string | null;
-  is_con_state: boolean;
-  // Additional data
-  address?: string | null;
-  phone?: string | null;
-  chain_organization?: string | null;
+  con_state: boolean;
+  pe_backed: boolean;
+  chain_affiliated: boolean;
+  total_revenue: number | null;
+  cms_cahps_star: number | null;
+  cms_quality_star: number | null;
   [key: string]: any;
 }
 
@@ -75,7 +65,6 @@ export function usePhillContext() {
   return useContext(PhillContext);
 }
 
-// Hook to update Phill context from provider pages
 export function useSetPhillProvider(provider: ProviderData | null) {
   const { setProvider } = usePhillContext();
   useEffect(() => {
@@ -84,1395 +73,738 @@ export function useSetPhillProvider(provider: ProviderData | null) {
   }, [provider, setProvider]);
 }
 
-interface Message {
+// ============================================
+// TYPES FOR INTERACTIVE COMPONENTS
+// ============================================
+
+interface ActionItem {
   id: string;
-  role: 'user' | 'assistant';
+  text: string;
+  completed: boolean;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  timeline: string;
+}
+
+interface ScoreCard {
+  metric: string;
+  current: number;
+  target: number;
+  gap: number;
+  status: 'excellent' | 'good' | 'warning' | 'critical';
+}
+
+interface TimelinePhase {
+  phase: string;
+  title: string;
+  weeks: string;
+  tasks: string[];
+  status: 'completed' | 'current' | 'upcoming';
+}
+
+interface PhillResponse {
+  type: 'text' | 'plan' | 'scorecard' | 'timeline' | 'education' | 'comparison';
   content: string;
-  timestamp: Date;
-}
-
-interface QuickAction {
-  label: string;
-  prompt: string;
-  icon: React.ReactNode;
-}
-
-// ============================================
-// PROVIDER-SPECIFIC ANALYSIS ENGINE
-// ============================================
-
-function getScoreQuality(score: number | null, benchmarks: { excellent: number; good: number; fair: number }): { level: string; color: string; description: string } {
-  if (score === null) return { level: 'Unknown', color: 'gray', description: 'No data available' };
-  if (score >= benchmarks.excellent) return { level: 'Excellent', color: 'emerald', description: 'Top performer, well above national average' };
-  if (score >= benchmarks.good) return { level: 'Good', color: 'turquoise', description: 'Above average performance' };
-  if (score >= benchmarks.fair) return { level: 'Fair', color: 'amber', description: 'Average performance, improvement opportunity' };
-  return { level: 'Needs Improvement', color: 'red', description: 'Below average, priority focus area' };
-}
-
-// Calculate gaps and priority areas for a specific provider
-function calculateProviderGaps(provider: ProviderData) {
-  const fiveStarThresholds = {
-    hci: { threshold: 92, name: 'Hospice Care Index (HCI)', weight: 25 },
-    hvldl: { threshold: 95, name: 'Visits in Last Days of Life (HVLDL)', weight: 20 },
-    communication: { threshold: 88, name: 'Communication with Family', weight: 15 },
-    timely_care: { threshold: 90, name: 'Timely Care', weight: 12 },
-    training: { threshold: 85, name: 'Training Family to Care', weight: 10 },
-    beliefs_values: { threshold: 88, name: 'Beliefs & Values Addressed', weight: 10 },
-    overall_rating: { threshold: 90, name: 'Overall Rating', weight: 5 },
-    willing_recommend: { threshold: 92, name: 'Would Recommend', weight: 3 },
+  title?: string;
+  providerName?: string;
+  scoreCards?: ScoreCard[];
+  actionItems?: ActionItem[];
+  timeline?: TimelinePhase[];
+  educationModule?: {
+    title: string;
+    sections: Array<{
+      heading: string;
+      content: string;
+      visual?: 'chart' | 'table' | 'diagram';
+    }>;
   };
-
-  const gaps: Array<{
-    metric: string;
-    current: number;
-    target: number;
-    gap: number;
-    weight: number;
-    priority: number;
-    specificActions: string[];
-    timeline: string;
-    investment: string;
-  }> = [];
-
-  // HCI
-  if (provider.hci_score !== null) {
-    const gap = fiveStarThresholds.hci.threshold - provider.hci_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.hci.name,
-        current: provider.hci_score,
-        target: fiveStarThresholds.hci.threshold,
-        gap,
-        weight: fiveStarThresholds.hci.weight,
-        priority: gap * fiveStarThresholds.hci.weight,
-        specificActions: [
-          `${provider.provider_name} needs to improve pain assessment completion from current levels to 100% within 48 hours of admission`,
-          'Implement a "No Assessment Left Behind" protocol with daily audit of all new admissions',
-          'Create an automated EHR alert for any patient without completed comprehensive assessment by Day 3',
-          'Train all RNs on proper dyspnea screening using the Borg Scale or validated tool',
-          'Establish standing orders for bowel regimen for ALL patients on opioids - document within 24 hours',
-          'Designate a "HCI Champion" on staff to perform weekly chart audits and real-time coaching',
-          'Hold daily 10-minute morning huddles to review any patients with missing documentation',
-        ],
-        timeline: gap > 15 ? '4-6 months' : gap > 8 ? '2-3 months' : '4-6 weeks',
-        investment: gap > 15 ? '$25,000-40,000' : gap > 8 ? '$12,000-20,000' : '$5,000-10,000',
-      });
-    }
-  }
-
-  // HVLDL
-  if (provider.hvldl_score !== null) {
-    const gap = fiveStarThresholds.hvldl.threshold - provider.hvldl_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.hvldl.name,
-        current: provider.hvldl_score,
-        target: fiveStarThresholds.hvldl.threshold,
-        gap,
-        weight: fiveStarThresholds.hvldl.weight,
-        priority: gap * fiveStarThresholds.hvldl.weight,
-        specificActions: [
-          `${provider.provider_name} must increase RN and Social Worker visits in the final 3 days of life`,
-          'Implement "Actively Dying Protocol" that auto-triggers daily RN visits when patient shows 2+ death-imminent signs',
-          'Create a "Last Days Response Team" with designated on-call RN for immediate response',
-          'Train ALL clinical staff on the 8 key death-imminent indicators (Cheyne-Stokes, mottling, etc.)',
-          'Require Social Worker visit within 24 hours once death appears imminent',
-          'Add HVLDL compliance to daily census review - flag any imminent patients without scheduled visits',
-          'Ensure 24/7 on-call RN can deploy within 2 hours for any imminent patient',
-          'Create weekend/holiday visit schedule template that maintains daily coverage for imminent patients',
-        ],
-        timeline: gap > 12 ? '3-4 months' : gap > 5 ? '6-8 weeks' : '3-4 weeks',
-        investment: gap > 12 ? '$30,000-50,000 (staffing)' : '$10,000-20,000',
-      });
-    }
-  }
-
-  // Communication
-  if (provider.communication_score !== null) {
-    const gap = fiveStarThresholds.communication.threshold - provider.communication_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.communication.name,
-        current: provider.communication_score,
-        target: fiveStarThresholds.communication.threshold,
-        gap,
-        weight: fiveStarThresholds.communication.weight,
-        priority: gap * fiveStarThresholds.communication.weight,
-        specificActions: [
-          `${provider.provider_name} family caregivers report communication gaps - this directly affects star ratings`,
-          'Implement "Call Family First" policy: RN calls family within 4 hours of any significant change',
-          'Create structured family conference template for care plan reviews - minimum monthly',
-          'Train staff on AIDET communication framework (Acknowledge, Introduce, Duration, Explanation, Thank)',
-          'Establish weekly proactive family check-in calls for all patients - not just when problems arise',
-          'Add communication training to new hire orientation with role-playing scenarios',
-          'Create "What to Expect" printed materials for each disease trajectory',
-          'Implement after-visit summaries sent to family email within 24 hours',
-        ],
-        timeline: gap > 10 ? '3-4 months' : '4-8 weeks',
-        investment: '$8,000-15,000 (training + materials)',
-      });
-    }
-  }
-
-  // Timely Care
-  if (provider.timely_care_score !== null) {
-    const gap = fiveStarThresholds.timely_care.threshold - provider.timely_care_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.timely_care.name,
-        current: provider.timely_care_score,
-        target: fiveStarThresholds.timely_care.threshold,
-        gap,
-        weight: fiveStarThresholds.timely_care.weight,
-        priority: gap * fiveStarThresholds.timely_care.weight,
-        specificActions: [
-          `${provider.provider_name} needs to improve response times for urgent patient/family requests`,
-          'Establish <4 hour response time SLA for all urgent symptom calls',
-          'Create tiered call response protocol: emergent (30 min), urgent (2 hr), routine (same day)',
-          'Staff a dedicated triage RN during peak call hours (8am-8pm)',
-          'Implement on-call response tracking with documented callback times',
-          'Add "time to response" as a key performance indicator for all clinical staff',
-        ],
-        timeline: gap > 8 ? '2-3 months' : '4-6 weeks',
-        investment: '$15,000-25,000 (staffing adjustments)',
-      });
-    }
-  }
-
-  // Training
-  if (provider.training_score !== null) {
-    const gap = fiveStarThresholds.training.threshold - provider.training_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.training.name,
-        current: provider.training_score,
-        target: fiveStarThresholds.training.threshold,
-        gap,
-        weight: fiveStarThresholds.training.weight,
-        priority: gap * fiveStarThresholds.training.weight,
-        specificActions: [
-          `${provider.provider_name} families don't feel adequately trained to provide care at home`,
-          'Create standardized "Caregiver Skills Training" curriculum covering: medications, comfort care, when to call',
-          'Develop video library of key caregiving skills families can review at home',
-          'Provide hands-on demonstration and return demonstration for ALL medication administration',
-          'Schedule dedicated "teaching visits" separate from routine nursing visits',
-          'Create printed quick-reference cards for symptom management, medication timing, emergency contacts',
-          'Add caregiver competency checkoff to patient record',
-        ],
-        timeline: gap > 10 ? '2-3 months' : '4-6 weeks',
-        investment: '$6,000-12,000 (curriculum + materials)',
-      });
-    }
-  }
-
-  // Beliefs & Values
-  if (provider.beliefs_values_score !== null) {
-    const gap = fiveStarThresholds.beliefs_values.threshold - provider.beliefs_values_score;
-    if (gap > 0) {
-      gaps.push({
-        metric: fiveStarThresholds.beliefs_values.name,
-        current: provider.beliefs_values_score,
-        target: fiveStarThresholds.beliefs_values.threshold,
-        gap,
-        weight: fiveStarThresholds.beliefs_values.weight,
-        priority: gap * fiveStarThresholds.beliefs_values.weight,
-        specificActions: [
-          `${provider.provider_name} needs better spiritual/cultural care integration`,
-          'Add spiritual/cultural assessment to initial intake with documented preferences',
-          'Train chaplain to visit ALL new patients within first week regardless of stated religious preference',
-          'Create cultural competency training for common cultural practices around death and dying',
-          'Document patient spiritual preferences prominently in care plan',
-          'Ensure IDT meetings include discussion of spiritual/cultural needs',
-          'Partner with local faith communities for expanded spiritual support options',
-        ],
-        timeline: '4-8 weeks',
-        investment: '$4,000-8,000 (training)',
-      });
-    }
-  }
-
-  // Sort by priority (gap × weight)
-  gaps.sort((a, b) => b.priority - a.priority);
-  return gaps;
 }
 
-function generateProviderSpecificAnalysis(provider: ProviderData, query: string): string | null {
-  const lowerQuery = query.toLowerCase();
+// ============================================
+// INTELLIGENT RESPONSE ENGINE
+// ============================================
+
+function calculateScoreCards(provider: ProviderData): ScoreCard[] {
+  const cards: ScoreCard[] = [];
+
+  const metrics = [
+    { key: 'overall_score', name: 'Overall Score', target: 85 },
+    { key: 'quality_score', name: 'Quality Score', target: 85 },
+    { key: 'compliance_score', name: 'Compliance', target: 80 },
+    { key: 'operational_score', name: 'Operations', target: 75 },
+    { key: 'market_score', name: 'Market Position', target: 70 },
+  ];
+
+  metrics.forEach(m => {
+    const current = provider[m.key] as number | null;
+    if (current !== null) {
+      const gap = m.target - current;
+      cards.push({
+        metric: m.name,
+        current: Math.round(current),
+        target: m.target,
+        gap: Math.round(gap),
+        status: current >= m.target ? 'excellent' : current >= m.target - 10 ? 'good' : current >= m.target - 20 ? 'warning' : 'critical'
+      });
+    }
+  });
+
+  return cards;
+}
+
+function generateFiveStarPlan(provider: ProviderData): PhillResponse {
   const name = provider.provider_name;
-  const classification = provider.classification || 'Unclassified';
+  const scoreCards = calculateScoreCards(provider);
 
-  // Quality score assessments
-  const hciQuality = getScoreQuality(provider.hci_score, { excellent: 85, good: 75, fair: 65 });
-  const hvldlQuality = getScoreQuality(provider.hvldl_score, { excellent: 90, good: 80, fair: 70 });
-  const commQuality = getScoreQuality(provider.communication_score, { excellent: 85, good: 78, fair: 70 });
-  const overallQuality = getScoreQuality(provider.overall_score, { excellent: 85, good: 75, fair: 60 });
+  // Calculate gaps and priorities
+  const gaps = scoreCards.filter(s => s.gap > 0).sort((a, b) => b.gap - a.gap);
+  const topPriority = gaps[0];
+  const secondPriority = gaps[1];
 
-  // ============================================
-  // 5-STAR PATH - PROVIDER-SPECIFIC ROADMAP
-  // ============================================
-  if (lowerQuery.includes('5 star') || lowerQuery.includes('5-star') || lowerQuery.includes('five star') ||
-      lowerQuery.includes('get to 5') || lowerQuery.includes('reach 5') || lowerQuery.includes('achieve 5') ||
-      lowerQuery.includes('become 5') || lowerQuery.includes('how to get') || lowerQuery.includes('path to')) {
+  // Estimate current stars
+  const currentStars = provider.overall_score !== null
+    ? provider.overall_score >= 85 ? 5
+      : provider.overall_score >= 70 ? 4
+      : provider.overall_score >= 55 ? 3
+      : provider.overall_score >= 40 ? 2 : 1
+    : 3;
 
-    const gaps = calculateProviderGaps(provider);
-    const totalGapPoints = gaps.reduce((sum, g) => sum + g.gap, 0);
-    const totalInvestment = gaps.reduce((sum, g) => {
-      const low = parseInt(g.investment.replace(/[^0-9]/g, '')) || 0;
-      return sum + low;
-    }, 0);
+  // Generate specific action items based on gaps
+  const actionItems: ActionItem[] = [];
 
-    // Estimate current star rating
-    const estimatedStars = provider.overall_score !== null
-      ? provider.overall_score >= 85 ? 5
-        : provider.overall_score >= 70 ? 4
-        : provider.overall_score >= 55 ? 3
-        : provider.overall_score >= 40 ? 2 : 1
-      : 3;
+  if (topPriority) {
+    if (topPriority.metric === 'Quality Score' || topPriority.metric === 'Overall Score') {
+      actionItems.push(
+        { id: '1', text: `Conduct comprehensive quality audit for ${name} - identify top 3 documentation gaps`, completed: false, priority: 'critical', timeline: 'Week 1' },
+        { id: '2', text: `Implement daily pain assessment compliance tracking - target 100% completion`, completed: false, priority: 'critical', timeline: 'Week 1-2' },
+        { id: '3', text: `Train all RNs on dyspnea screening protocol using Borg Scale`, completed: false, priority: 'high', timeline: 'Week 2' },
+        { id: '4', text: `Create "Death Imminent" protocol with auto-triggered daily RN visits`, completed: false, priority: 'high', timeline: 'Week 2-3' },
+        { id: '5', text: `Establish standing bowel regimen orders for all opioid patients`, completed: false, priority: 'high', timeline: 'Week 3' },
+        { id: '6', text: `Launch weekly family satisfaction calls for active patients`, completed: false, priority: 'medium', timeline: 'Week 3-4' },
+      );
+    }
+    if (topPriority.metric === 'Compliance') {
+      actionItems.push(
+        { id: '1', text: `Review last 3 years of survey history - identify repeat deficiency patterns`, completed: false, priority: 'critical', timeline: 'Week 1' },
+        { id: '2', text: `Create Plan of Correction tracker with assigned owners and deadlines`, completed: false, priority: 'critical', timeline: 'Week 1' },
+        { id: '3', text: `Implement mock survey program - monthly internal audits`, completed: false, priority: 'high', timeline: 'Week 2-4' },
+        { id: '4', text: `Train staff on Conditions of Participation (CoP) requirements`, completed: false, priority: 'high', timeline: 'Week 2-3' },
+      );
+    }
+    if (topPriority.metric === 'Operations') {
+      actionItems.push(
+        { id: '1', text: `Analyze current staffing patterns - identify weekend/evening gaps`, completed: false, priority: 'critical', timeline: 'Week 1' },
+        { id: '2', text: `Create 24/7 RN on-call coverage schedule with <2 hour response SLA`, completed: false, priority: 'critical', timeline: 'Week 1-2' },
+        { id: '3', text: `Implement visit productivity tracking by clinician`, completed: false, priority: 'high', timeline: 'Week 2-3' },
+        { id: '4', text: `Establish referral-to-admission conversion tracking`, completed: false, priority: 'medium', timeline: 'Week 3-4' },
+      );
+    }
+  }
 
-    // Calculate time to 5 stars
-    const timeEstimate = totalGapPoints > 100 ? '12-18 months'
-      : totalGapPoints > 60 ? '8-12 months'
-      : totalGapPoints > 30 ? '4-6 months'
-      : '2-4 months';
+  // Generate timeline
+  const timeline: TimelinePhase[] = [
+    {
+      phase: '1',
+      title: 'Foundation',
+      weeks: 'Weeks 1-4',
+      tasks: [
+        `Complete baseline audit of ${name}'s quality metrics`,
+        'Assign executive sponsor and project lead',
+        'Set up daily tracking dashboards',
+        'Launch quick-win improvements',
+        'Begin staff training program'
+      ],
+      status: 'current'
+    },
+    {
+      phase: '2',
+      title: 'Acceleration',
+      weeks: 'Weeks 5-8',
+      tasks: [
+        'Deploy all Phase 1 protocols to full team',
+        'Implement peer accountability system',
+        'Weekly quality review meetings',
+        'Address secondary improvement areas',
+        'Mid-point progress assessment'
+      ],
+      status: 'upcoming'
+    },
+    {
+      phase: '3',
+      title: 'Optimization',
+      weeks: 'Weeks 9-12',
+      tasks: [
+        'Refine processes based on data',
+        'Build sustainability into daily ops',
+        'Prepare for next CAHPS survey cycle',
+        'Document best practices',
+        'Final progress review'
+      ],
+      status: 'upcoming'
+    },
+    {
+      phase: '4',
+      title: 'Excellence',
+      weeks: 'Months 4-6',
+      tasks: [
+        'Achieve 5-star quality metrics',
+        'Sustain improvements long-term',
+        'Train internal quality champions',
+        'Build continuous improvement culture',
+        'Prepare for ongoing excellence'
+      ],
+      status: 'upcoming'
+    }
+  ];
 
-    if (gaps.length === 0) {
-      return `**${name} - Path to 5 Stars**
+  // Calculate investment
+  const totalGap = gaps.reduce((sum, g) => sum + g.gap, 0);
+  const investmentLow = Math.round(totalGap * 1500);
+  const investmentHigh = Math.round(totalGap * 3000);
 
-🌟 **Congratulations!** Based on available data, ${name} appears to already be performing at or near 5-star levels across key quality measures.
+  const content = `
+# ${name} - Path to 5-Star Excellence
 
-**Current Performance:**
-- Overall Score: ${provider.overall_score ?? 'N/A'}
-- HCI: ${provider.hci_score ?? 'N/A'}%
-- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
-- Communication: ${provider.communication_score ?? 'N/A'}%
+## Current State
+**Estimated Rating:** ${currentStars} Star${currentStars !== 1 ? 's' : ''}
+**Overall Score:** ${provider.overall_score ?? 'N/A'}/100
+**Classification:** ${provider.classification || 'Unclassified'}
+**Location:** ${provider.city}, ${provider.state} ${provider.con_state ? '(CON Protected)' : ''}
 
-**Maintenance Strategy:**
-1. **Sustain Excellence** - Continue current protocols without complacency
-2. **Monitor Monthly** - Track all quality metrics monthly to catch any early declines
-3. **Staff Retention** - High-performing staff are your greatest asset; invest in retention
-4. **Culture Reinforcement** - Regularly celebrate quality wins with the team
-5. **Best Practice Sharing** - Document what's working for training and scalability
+## Gap Analysis
+${gaps.length === 0 ? '✅ **Congratulations!** ' + name + ' is already performing at or near 5-star levels.' :
+  gaps.map((g, i) => `**${i + 1}. ${g.metric}:** ${g.current}% → ${g.target}% (Gap: ${g.gap} pts)`).join('\n')}
 
-**Risk Factors to Watch:**
-- Staff turnover (can rapidly impact quality)
-- Volume growth without proportional staffing
-- EHR changes that disrupt documentation workflows
-- Survey timing and preparation
+## Investment Required
+**Estimated Total:** $${investmentLow.toLocaleString()} - $${investmentHigh.toLocaleString()}
 
-Would you like detailed strategies for maintaining 5-star status?`;
+- Training & Education: $15,000 - $30,000
+- Process Improvement: $10,000 - $20,000
+- Staffing Adjustments: $20,000 - $50,000
+- Technology/Tools: $5,000 - $15,000
+
+## Expected Timeline
+${totalGap > 60 ? '**8-12 months** to achieve 5-star status' :
+  totalGap > 30 ? '**4-6 months** to achieve 5-star status' :
+  '**2-4 months** to achieve 5-star status'}
+
+## Key Success Factors
+1. **Executive Commitment** - Administrator must champion quality daily
+2. **Staff Engagement** - Everyone understands WHY each measure matters
+3. **Data Visibility** - Real-time dashboards for all to see
+4. **Accountability** - Clear ownership with consequences
+5. **Celebration** - Recognize progress, not just final achievement
+`;
+
+  return {
+    type: 'plan',
+    title: `${name} - 5-Star Roadmap`,
+    providerName: name,
+    content,
+    scoreCards,
+    actionItems,
+    timeline
+  };
+}
+
+function generateEducationModule(topic: string, provider: ProviderData | null): PhillResponse {
+  const providerContext = provider ? ` (with examples specific to ${provider.provider_name})` : '';
+
+  if (topic.includes('5') && topic.includes('star')) {
+    return {
+      type: 'education',
+      title: 'Understanding the 5-Star Rating System',
+      content: '',
+      educationModule: {
+        title: 'CMS 5-Star Quality Rating System' + providerContext,
+        sections: [
+          {
+            heading: 'What is the 5-Star System?',
+            content: `The CMS 5-Star Quality Rating System helps consumers, families, and caregivers compare healthcare providers. For hospice, ratings are based on quality measures derived from clinical data and family surveys (CAHPS).
+
+${provider ? `**${provider.provider_name}'s Current Position:**
+• Overall Score: ${provider.overall_score ?? 'N/A'}/100
+• CAHPS Star Rating: ${provider.cms_cahps_star ?? 'N/A'} stars
+• Quality Star Rating: ${provider.cms_quality_star ?? 'N/A'} stars` : ''}`,
+            visual: 'chart'
+          },
+          {
+            heading: 'The Three Pillars of Quality',
+            content: `**1. Clinical Quality Measures (HCI)**
+The Hospice Care Index measures:
+• Pain assessment completion (100% target)
+• Dyspnea screening and treatment
+• Bowel regimen for opioid patients
+• Comprehensive assessment within 5 days
+• Timely initiation of care
+
+**2. Visits in Last Days of Life (HVLDL)**
+Measures RN/MSW visits in patient's final 3 days:
+• 5-Star Threshold: ≥95%
+• National Average: ~82%
+${provider ? `• ${provider.provider_name}: Track and improve end-of-life presence` : ''}
+
+**3. CAHPS Family Experience Survey**
+Measures family satisfaction across:
+• Communication with hospice team
+• Getting help quickly
+• Treating patient with respect
+• Emotional and spiritual support
+• Training family to care for patient`,
+            visual: 'diagram'
+          },
+          {
+            heading: 'How Ratings Are Calculated',
+            content: `**Star Rating Thresholds:**
+| Stars | Score Range | Interpretation |
+|-------|-------------|----------------|
+| ⭐⭐⭐⭐⭐ | 85-100 | Much above average |
+| ⭐⭐⭐⭐ | 70-84 | Above average |
+| ⭐⭐⭐ | 55-69 | Average |
+| ⭐⭐ | 40-54 | Below average |
+| ⭐ | 0-39 | Much below average |
+
+${provider ? `**${provider.provider_name}'s Position:**
+Current Score: ${provider.overall_score ?? 'N/A'} = ${
+  provider.overall_score !== null
+    ? provider.overall_score >= 85 ? '5 Stars ⭐⭐⭐⭐⭐'
+    : provider.overall_score >= 70 ? '4 Stars ⭐⭐⭐⭐'
+    : provider.overall_score >= 55 ? '3 Stars ⭐⭐⭐'
+    : provider.overall_score >= 40 ? '2 Stars ⭐⭐'
+    : '1 Star ⭐'
+    : 'Unknown'
+}` : ''}`,
+            visual: 'table'
+          },
+          {
+            heading: 'Path to 5 Stars',
+            content: `**Quick Wins (30 Days):**
+1. Audit current documentation compliance
+2. Implement same-day admission visits
+3. Train staff on pain assessment tools
+4. Create death-imminent protocols
+
+**Medium-Term (90 Days):**
+1. Launch comprehensive training program
+2. Optimize EHR workflows
+3. Implement quality dashboards
+4. Peer chart audits monthly
+
+**Long-Term (6-12 Months):**
+1. Build continuous improvement culture
+2. Sustain excellence through accountability
+3. Prepare for ongoing CAHPS cycles
+
+${provider ? `\n**Specific for ${provider.provider_name}:**
+Focus first on ${provider.quality_score !== null && provider.quality_score < 70 ? 'quality measures' : provider.compliance_score !== null && provider.compliance_score < 70 ? 'compliance' : 'sustaining current performance'}` : ''}`
+          }
+        ]
+      }
+    };
+  }
+
+  // Default education response
+  return {
+    type: 'education',
+    title: 'Hospice Quality Education',
+    content: `I can teach you about:
+• **5-Star Rating System** - How ratings work and what they mean
+• **Quality Measures** - HCI, HVLDL, CAHPS explained
+• **Improvement Strategies** - Proven tactics to boost scores
+• **Survey Preparation** - How to prepare for CMS surveys
+• **M&A Implications** - How quality affects valuation
+
+What would you like to learn about?`,
+    educationModule: undefined
+  };
+}
+
+function generateResponse(query: string, provider: ProviderData | null, pathname: string): PhillResponse {
+  const lowerQuery = query.toLowerCase();
+
+  // ALWAYS check for provider-specific queries first when we have provider context
+  if (provider) {
+    // 5-star path questions
+    if (lowerQuery.includes('5') || lowerQuery.includes('five') || lowerQuery.includes('star') ||
+        lowerQuery.includes('improve') || lowerQuery.includes('better') || lowerQuery.includes('path') ||
+        lowerQuery.includes('get to') || lowerQuery.includes('reach') || lowerQuery.includes('achieve') ||
+        lowerQuery.includes('how can') || lowerQuery.includes('how do')) {
+      return generateFiveStarPlan(provider);
     }
 
-    return `**${name} - Detailed Path to 5-Star Status**
-
-**CURRENT STATE ASSESSMENT**
-
-📊 **Estimated Current Rating:** ${estimatedStars} Stars
-📈 **Overall Score:** ${provider.overall_score ?? 'N/A'}/100
-🏥 **Location:** ${provider.city}, ${provider.state}
-📋 **Classification:** ${classification}
-
----
-
-**THE GAP ANALYSIS: What ${name} Needs to Improve**
-
-${gaps.slice(0, 5).map((g, i) => `
-**${i + 1}. ${g.metric}** ⚠️ GAP: ${g.gap.toFixed(1)} points
-   Current: **${g.current.toFixed(1)}%** → Target: **${g.target}%** (5-star threshold)
-   Weight in Overall Score: ${g.weight}%
-
-   **SPECIFIC ACTIONS FOR ${name.toUpperCase()}:**
-${g.specificActions.map(action => `   • ${action}`).join('\n')}
-
-   ⏱️ Timeline: ${g.timeline}
-   💰 Investment: ${g.investment}
-`).join('\n')}
-
----
-
-**PHASED IMPROVEMENT ROADMAP FOR ${name.toUpperCase()}**
-
-**PHASE 1: FOUNDATION (Weeks 1-4)**
-
-${gaps.length > 0 ? `
-Focus Area: **${gaps[0].metric}** (Highest Impact)
-
-Week 1:
-• Conduct baseline audit of current ${gaps[0].metric.toLowerCase()} performance
-• Identify top 3 root causes for gaps (staffing? process? documentation? training?)
-• Assign an executive sponsor and project lead
-• Set up daily tracking dashboard
-
-Week 2-3:
-• Implement quick wins from action list above
-• Begin staff training on new protocols
-• Create job aids and checklists
-• Daily huddles to review progress
-
-Week 4:
-• Measure improvement from baseline
-• Adjust approach based on what's working
-• Celebrate early wins to build momentum
-• Begin Phase 2 planning
-` : ''}
-
-**PHASE 2: ACCELERATION (Weeks 5-12)**
-
-${gaps.length > 1 ? `
-Expand to: **${gaps[1].metric}** while sustaining ${gaps[0].metric}
-
-• Deploy second priority improvement protocols
-• Cross-train staff on multiple improvement areas
-• Implement peer accountability systems
-• Weekly quality review meetings
-• Monthly progress reporting to leadership
-` : 'Continue deepening Phase 1 improvements'}
-
-**PHASE 3: OPTIMIZATION (Months 4-6)**
-
-${gaps.length > 2 ? `
-Address remaining gaps: ${gaps.slice(2).map(g => g.metric).join(', ')}
-
-• Refine all processes based on lessons learned
-• Build sustainability into daily operations
-• Develop internal QI expertise
-• Prepare for next CAHPS survey cycle
-` : 'Polish and sustain all improvements'}
-
-**PHASE 4: EXCELLENCE (Months 6-12)**
-
-• Achieve and sustain 5-star metrics
-• Build continuous improvement culture
-• Document best practices for scalability
-• Train internal quality champions
-• Prepare for ongoing excellence
-
----
-
-**INVESTMENT SUMMARY FOR ${name.toUpperCase()}**
-
-| Category | Estimated Cost |
-|----------|---------------|
-| Training & Education | $15,000 - $30,000 |
-| Process Improvement | $10,000 - $20,000 |
-| Technology/Tools | $5,000 - $15,000 |
-| Staffing Adjustments | $20,000 - $50,000/year |
-| Consulting Support | $15,000 - $35,000 |
-| **TOTAL YEAR 1** | **$65,000 - $150,000** |
-
-**ROI JUSTIFICATION:**
-• Higher referral rates from improved reputation (est. 10-15% increase)
-• Premium positioning in market (${provider.is_con_state ? 'especially important in this CON state' : 'competitive differentiation'})
-• Reduced survey risk and compliance costs
-• Enhanced valuation multiple for future M&A (5-star = +15-25% premium)
-• Staff satisfaction and retention improvement
-
----
-
-**KEY SUCCESS FACTORS FOR ${name}**
-
-✅ **Leadership Commitment** - Administrator and Medical Director must champion quality daily
-✅ **Staff Engagement** - Front-line staff must understand WHY each measure matters
-✅ **Data Visibility** - Real-time dashboards so everyone knows current performance
-✅ **Accountability** - Clear ownership for each metric with consequences
-✅ **Celebration** - Recognize and reward progress, not just final achievement
-
----
-
-**TIMELINE TO 5 STARS: ${timeEstimate.toUpperCase()}**
-
-This is achievable if ${name} commits to:
-1. Executive sponsorship at Administrator level
-2. Dedicated quality improvement resources
-3. Weekly progress reviews
-4. Rapid PDSA cycles (Plan-Do-Study-Act)
-5. No tolerance for backsliding
-
----
-
-**IMMEDIATE NEXT STEPS FOR ${name}**
-
-1. **This Week:** Share this analysis with leadership team
-2. **Next Week:** Conduct gap root cause analysis
-3. **Week 3:** Launch Phase 1 improvement initiatives
-4. **Week 4:** First progress review and course correction
-
-Would you like me to dive deeper into any specific measure or provide detailed protocols for ${gaps[0]?.metric || 'a specific area'}?`;
-  }
-
-  // Full analysis when asking about the provider
-  if (lowerQuery.includes('analyze') || lowerQuery.includes('analysis') ||
-      lowerQuery.includes('about this') || lowerQuery.includes('this provider') ||
-      lowerQuery.includes('this hospice') || lowerQuery.includes('tell me about') ||
-      lowerQuery.includes('overview') || lowerQuery.includes('summary')) {
-
-    return `**Comprehensive Analysis: ${name}**
-
-**Location:** ${provider.city}, ${provider.state} ${provider.is_con_state ? '(CON-Protected Market)' : ''}
-**CCN:** ${provider.ccn}
-**Classification:** ${classification}
-**Ownership:** ${provider.ownership_type || 'Not specified'}
-${provider.chain_organization ? `**Chain Affiliation:** ${provider.chain_organization}` : '**Chain Affiliation:** Independent (Endemic)'}
-
----
-
-**EXECUTIVE SUMMARY**
-
-${name} is classified as **${classification}** based on our M&A scoring methodology. ${
-  classification === 'GREEN'
-    ? 'This provider meets all quality thresholds and represents a prime acquisition candidate with minimal remediation requirements.'
-    : classification === 'YELLOW'
-    ? 'This provider shows mixed indicators requiring additional due diligence and a post-acquisition improvement plan.'
-    : 'This provider presents elevated risk and would require significant remediation post-acquisition.'
-}
-
-**Overall Score:** ${provider.overall_score !== null ? `${provider.overall_score}/100 (${overallQuality.level})` : 'Data not available'}
-
----
-
-**QUALITY METRICS DEEP DIVE**
-
-**1. Hospice Care Index (HCI): ${provider.hci_score !== null ? `${provider.hci_score}%` : 'N/A'}** — ${hciQuality.level}
-${provider.hci_score !== null ? `
-This composite measure evaluates clinical quality across multiple dimensions:
-- Timeliness of care initiation
-- Pain assessment completion
-- Dyspnea screening
-- Bowel regimen documentation
-- Comprehensive assessment within 5 days
-
-${provider.hci_score >= 85
-  ? '✓ **Strong Performance:** HCI above 85% indicates excellent clinical protocols and documentation. This is a key quality differentiator in the market.'
-  : provider.hci_score >= 75
-  ? '◐ **Good Performance:** HCI between 75-85% shows solid clinical care. Minor improvements in documentation or protocol adherence could push this into excellence territory.'
-  : provider.hci_score >= 65
-  ? '⚠️ **Improvement Needed:** HCI below 75% suggests gaps in clinical protocols or documentation. Focus areas: assessment timeliness, symptom management documentation.'
-  : '⛔ **Priority Focus:** HCI below 65% indicates significant clinical quality concerns. Comprehensive review of care protocols, staff training, and documentation systems recommended.'
-}
-${provider.hci_percentile ? `\n**Percentile Rank:** ${provider.hci_percentile}th percentile nationally` : ''}
-` : 'No HCI data available. This may indicate a new provider or data reporting issues.'}
-
-**2. Hospice Visits in Last Days of Life (HVLDL): ${provider.hvldl_score !== null ? `${provider.hvldl_score}%` : 'N/A'}** — ${hvldlQuality.level}
-${provider.hvldl_score !== null ? `
-This critical measure tracks RN and MSW visits in the final 3 days of life:
-
-${provider.hvldl_score >= 90
-  ? '✓ **Exceptional:** Above 90% indicates strong commitment to end-of-life presence. Families highly value this, reflected in CAHPS scores.'
-  : provider.hvldl_score >= 80
-  ? '◐ **Solid:** 80-90% is above average. Consider protocols to ensure visits even on weekends/holidays for further improvement.'
-  : provider.hvldl_score >= 70
-  ? '⚠️ **Below Average:** 70-80% suggests gaps in end-of-life coverage. Implement 24/7 on-call protocols and predictive models for identifying patients approaching end-of-life.'
-  : '⛔ **Critical Gap:** Below 70% significantly impacts family experience and CAHPS scores. Immediate attention needed on staffing coverage and death imminent protocols.'
-}
-` : 'No HVLDL data available.'}
-
-**3. CAHPS Communication: ${provider.communication_score !== null ? `${provider.communication_score}%` : 'N/A'}** — ${commQuality.level}
-${provider.communication_score !== null ? `
-Family perception of communication directly impacts referral relationships and overall satisfaction:
-
-${provider.communication_score >= 85
-  ? '✓ **Excellent:** Strong communication skills across the team. This drives word-of-mouth referrals and physician trust.'
-  : provider.communication_score >= 78
-  ? '◐ **Good:** Above average communication. Consider structured family conferences and more proactive updates to reach excellence.'
-  : provider.communication_score >= 70
-  ? '⚠️ **Average:** Room for improvement. Implement communication training, set family contact frequency standards, improve care plan education.'
-  : '⛔ **Priority:** Poor communication scores significantly impact referral relationships. Comprehensive training program needed.'
-}
-` : 'No communication data available.'}
-
-**4. Overall CAHPS Rating: ${provider.overall_rating_score !== null ? `${provider.overall_rating_score}%` : 'N/A'}**
-${provider.overall_rating_score !== null ? `
-This is the "bottom line" family satisfaction metric. ${provider.overall_rating_score >= 85 ? 'Excellent performance.' : provider.overall_rating_score >= 75 ? 'Good performance.' : 'Improvement opportunity.'}
-` : ''}
-
-**5. Willingness to Recommend: ${provider.willing_recommend_score !== null ? `${provider.willing_recommend_score}%` : 'N/A'}**
-${provider.willing_recommend_score !== null ? `
-The ultimate loyalty metric. ${provider.willing_recommend_score >= 85 ? 'Strong advocacy from families.' : provider.willing_recommend_score >= 75 ? 'Good recommendation rate.' : 'Focus on service recovery and experience improvement.'}
-` : ''}
-
----
-
-**OPERATIONAL METRICS**
-
-**Estimated Average Daily Census (ADC):** ${provider.estimated_adc !== null ? provider.estimated_adc : 'Not available'}
-${provider.estimated_adc !== null ? `
-${provider.estimated_adc >= 100
-  ? '**Large Provider:** ADC 100+ indicates significant market presence. Benefits from economies of scale, established referral networks, and operational infrastructure.'
-  : provider.estimated_adc >= 50
-  ? '**Mid-Size Provider:** ADC 50-100 represents a solid operational platform. Good balance of scale and manageability for integration.'
-  : provider.estimated_adc >= 25
-  ? '**Small-Medium Provider:** ADC 25-50 is typical for regional providers. May benefit from management support post-acquisition.'
-  : '**Small Provider:** ADC under 25 suggests limited market penetration or new operation. Higher operational risk but potentially attractive valuation.'
-}
-
-**Valuation Estimate (ADC Method):**
-- Conservative: $${((provider.estimated_adc || 0) * 25000).toLocaleString()} (ADC × $25K)
-- Mid-Range: $${((provider.estimated_adc || 0) * 35000).toLocaleString()} (ADC × $35K)
-- Premium: $${((provider.estimated_adc || 0) * 45000).toLocaleString()} (ADC × $45K)
-` : ''}
-
----
-
-**MARKET POSITION**
-
-**State:** ${provider.state}
-${provider.is_con_state ? `
-✓ **CON-Protected Market**
-This hospice operates in a Certificate of Need state, which provides:
-- Regulatory barriers to new competitor entry
-- Protected market position
-- Premium valuation multiple (typically 15-25% above non-CON)
-- Acquisition is primary market entry strategy for buyers
-` : `
-◐ **Non-CON Market**
-Open market entry allows new competitors. Competitive dynamics driven by:
-- Quality reputation
-- Referral relationships
-- Geographic coverage
-- Payer mix optimization
-`}
-
----
-
-**M&A IMPLICATIONS**
-
-${classification === 'GREEN' ? `
-**Investment Thesis:** ${name} is a prime acquisition candidate.
-
-**Strengths:**
-${provider.overall_score && provider.overall_score >= 75 ? '✓ Strong overall quality score' : ''}
-${provider.hci_score && provider.hci_score >= 75 ? '✓ Good clinical quality (HCI)' : ''}
-${provider.is_con_state ? '✓ CON protection provides competitive moat' : ''}
-${!provider.chain_organization ? '✓ Independent operator - potential owner carry-back' : ''}
-
-**Suggested Approach:**
-1. Initial outreach to gauge seller interest
-2. Quality data verification in due diligence
-3. Management team assessment
-4. Integration planning with minimal disruption focus
-` : classification === 'YELLOW' ? `
-**Investment Thesis:** ${name} presents a value-add opportunity with improvement potential.
-
-**Considerations:**
-- Quality metrics show room for improvement
-- Post-acquisition operational enhancement needed
-- Pricing should reflect improvement investment
-- Timeline: 6-12 months for meaningful rating improvement
-
-**Due Diligence Focus:**
-1. Root cause analysis of quality gaps
-2. Staffing stability and turnover data
-3. Survey history and deficiency patterns
-4. Management team capability
-` : `
-**Investment Thesis:** ${name} requires significant remediation and presents elevated risk.
-
-**Risk Factors:**
-- Quality metrics below acceptable thresholds
-- May have survey/compliance concerns
-- Potential for continued deterioration
-- Higher integration complexity
-
-**Recommendation:** Deep due diligence before proceeding. Consider pass unless compelling strategic rationale.
-`}
-
----
-
-What specific aspect would you like me to elaborate on?
-- Quality improvement action plan
-- Detailed valuation analysis
-- Due diligence checklist
-- Comparison to market benchmarks`;
-  }
-
-  // Quality-specific questions
-  if (lowerQuery.includes('quality') || lowerQuery.includes('score') || lowerQuery.includes('rating') ||
-      lowerQuery.includes('measure') || lowerQuery.includes('metric')) {
-    return `**Quality Analysis: ${name}**
-
-**Overall Quality Position:** ${overallQuality.level}
-
-${provider.overall_score !== null ? `
-**Composite Score:** ${provider.overall_score}/100
-
-This score incorporates multiple quality dimensions weighted by M&A relevance:
-` : ''}
-
-**CAHPS Survey Results (Family Experience)**
-
-| Measure | Score | Assessment |
-|---------|-------|------------|
-| Overall Rating | ${provider.overall_rating_score ?? 'N/A'}% | ${provider.overall_rating_score ? (provider.overall_rating_score >= 85 ? 'Excellent' : provider.overall_rating_score >= 75 ? 'Good' : 'Needs Work') : '—'} |
-| Would Recommend | ${provider.willing_recommend_score ?? 'N/A'}% | ${provider.willing_recommend_score ? (provider.willing_recommend_score >= 85 ? 'Strong' : provider.willing_recommend_score >= 75 ? 'Good' : 'Concern') : '—'} |
-| Communication | ${provider.communication_score ?? 'N/A'}% | ${commQuality.level} |
-| Training Family | ${provider.training_score ?? 'N/A'}% | ${provider.training_score ? (provider.training_score >= 80 ? 'Good' : 'Opportunity') : '—'} |
-| Beliefs/Values | ${provider.beliefs_values_score ?? 'N/A'}% | ${provider.beliefs_values_score ? (provider.beliefs_values_score >= 85 ? 'Excellent' : 'Review') : '—'} |
-
-**Clinical Quality Measures**
-
-| Measure | Score | Assessment |
-|---------|-------|------------|
-| HCI (Composite) | ${provider.hci_score ?? 'N/A'}% | ${hciQuality.level} |
-| HVLDL | ${provider.hvldl_score ?? 'N/A'}% | ${hvldlQuality.level} |
-| Timely Care | ${provider.timely_care_score ?? 'N/A'}% | ${provider.timely_care_score ? (provider.timely_care_score >= 80 ? 'Good' : 'Review') : '—'} |
-
-**Key Observations:**
-${provider.hci_score !== null && provider.hci_score < 75 ? '⚠️ HCI below 75% indicates clinical documentation or protocol gaps\n' : ''}${provider.hvldl_score !== null && provider.hvldl_score < 80 ? '⚠️ HVLDL below 80% suggests end-of-life coverage issues\n' : ''}${provider.communication_score !== null && provider.communication_score < 78 ? '⚠️ Communication scores below average affect referral relationships\n' : ''}${provider.overall_score !== null && provider.overall_score >= 80 ? '✓ Overall strong quality profile\n' : ''}
-
-**Improvement Priority:**
-${provider.hci_score !== null && provider.communication_score !== null && provider.hci_score < provider.communication_score ?
-  '1. Focus on clinical quality (HCI) first - biggest impact on overall rating' :
-  '1. Focus on family experience (CAHPS) - drives referrals'
-}
-
-Would you like specific action plans for any of these measures?`;
-  }
-
-  // Valuation questions
-  if (lowerQuery.includes('value') || lowerQuery.includes('worth') || lowerQuery.includes('valuation') ||
-      lowerQuery.includes('price') || lowerQuery.includes('multiple') || lowerQuery.includes('buy')) {
-    const adc = provider.estimated_adc || 0;
-    const qualityMultiplier = (provider.overall_score || 50) >= 80 ? 1.2 : (provider.overall_score || 50) >= 65 ? 1.0 : 0.85;
-    const conMultiplier = provider.is_con_state ? 1.15 : 1.0;
-
-    return `**Valuation Analysis: ${name}**
-
-**Key Value Drivers**
-
-1. **Average Daily Census (ADC):** ${adc > 0 ? adc : 'Unknown'}
-   ${adc > 0 ? `- Annual Patient Days: ~${(adc * 365).toLocaleString()}` : ''}
-   ${adc > 0 ? `- Estimated Annual Revenue: $${((adc * 365 * 185 * 0.85)).toLocaleString()} (assuming $185/day, 85% Medicare)` : ''}
-
-2. **Quality Score:** ${provider.overall_score || 'N/A'}
-   - Quality Premium/Discount: ${qualityMultiplier >= 1.1 ? '+20% (Premium)' : qualityMultiplier >= 1.0 ? 'Market rate' : '-15% (Discount)'}
-
-3. **Market Position:** ${provider.state}
-   - CON Protection: ${provider.is_con_state ? 'Yes (+15% premium)' : 'No (market rate)'}
-   - Ownership: ${provider.chain_organization ? 'Chain-affiliated' : 'Independent'}
-
----
-
-**VALUATION METHODOLOGIES**
-
-**Method 1: Per-ADC Valuation**
-${adc > 0 ? `
-| Scenario | Per-ADC | Value |
-|----------|---------|-------|
+    // Analysis questions
+    if (lowerQuery.includes('analyze') || lowerQuery.includes('analysis') || lowerQuery.includes('tell me') ||
+        lowerQuery.includes('about') || lowerQuery.includes('summary') || lowerQuery.includes('overview')) {
+      const plan = generateFiveStarPlan(provider);
+      plan.title = `${provider.provider_name} - Complete Analysis`;
+      return plan;
+    }
+
+    // Valuation questions
+    if (lowerQuery.includes('value') || lowerQuery.includes('worth') || lowerQuery.includes('price')) {
+      const adc = provider.estimated_adc || 30;
+      const qualityMult = (provider.overall_score || 50) >= 80 ? 1.2 : (provider.overall_score || 50) >= 65 ? 1.0 : 0.85;
+      const conMult = provider.con_state ? 1.15 : 1.0;
+      const baseValue = adc * 35000;
+      const adjustedValue = Math.round(baseValue * qualityMult * conMult);
+
+      return {
+        type: 'text',
+        content: `# ${provider.provider_name} - Valuation Analysis
+
+## Key Value Drivers
+- **ADC:** ${adc} patients
+- **Quality Score:** ${provider.overall_score ?? 'N/A'}/100 (${qualityMult >= 1.1 ? '+20% premium' : qualityMult >= 1.0 ? 'market rate' : '-15% discount'})
+- **CON State:** ${provider.con_state ? 'Yes (+15% premium)' : 'No'}
+- **Classification:** ${provider.classification}
+
+## Valuation Estimates
+
+### Per-ADC Method
+| Scenario | Per-ADC | Total Value |
+|----------|---------|-------------|
 | Conservative | $25,000 | $${(adc * 25000).toLocaleString()} |
 | Market Rate | $35,000 | $${(adc * 35000).toLocaleString()} |
 | Premium | $45,000 | $${(adc * 45000).toLocaleString()} |
 
-**Adjusted for Quality & Market:**
-- Base (Market): $${(adc * 35000).toLocaleString()}
-- Quality Adjustment: ${qualityMultiplier >= 1.1 ? '+20%' : qualityMultiplier >= 1.0 ? '+0%' : '-15%'}
-- CON Adjustment: ${provider.is_con_state ? '+15%' : '+0%'}
-- **Indicated Value: $${Math.round(adc * 35000 * qualityMultiplier * conMultiplier).toLocaleString()}**
-` : 'ADC data required for this analysis'}
+### Quality-Adjusted Value
+**Indicated Value: $${adjustedValue.toLocaleString()}**
+(Base × Quality Adj × CON Adj)
 
-**Method 2: Revenue Multiple**
-${adc > 0 ? `
-Estimated Annual Revenue: $${((adc * 365 * 185 * 0.85)).toLocaleString()}
-| Multiple | Value |
-|----------|-------|
-| 0.8x | $${Math.round(adc * 365 * 185 * 0.85 * 0.8).toLocaleString()} |
-| 1.0x | $${Math.round(adc * 365 * 185 * 0.85 * 1.0).toLocaleString()} |
-| 1.2x | $${Math.round(adc * 365 * 185 * 0.85 * 1.2).toLocaleString()} |
-` : 'Revenue data required for this analysis'}
+## Deal Considerations
+${!provider.pe_backed && !provider.chain_affiliated ? '✅ **Independent Owner** - May be open to seller financing / owner carry-back' :
+  provider.pe_backed ? '⚠️ **PE-Backed** - Expect formal process, limited negotiation flexibility' :
+  '📋 **Chain Affiliated** - May have corporate approval requirements'}
 
-**Method 3: EBITDA Multiple**
-Assuming 15-18% EBITDA margin on revenue:
-${adc > 0 ? `
-- Estimated EBITDA: $${Math.round(adc * 365 * 185 * 0.85 * 0.16).toLocaleString()}
-- At 4.0x: $${Math.round(adc * 365 * 185 * 0.85 * 0.16 * 4).toLocaleString()}
-- At 5.0x: $${Math.round(adc * 365 * 185 * 0.85 * 0.16 * 5).toLocaleString()}
-` : 'Financial data required'}
-
----
-
-**VALUATION CONSIDERATIONS**
-
-${classification === 'GREEN' ? `
-✓ **Premium Candidate**
-- Strong quality metrics support premium valuation
-- Lower integration risk
-- Immediate accretive potential
-` : classification === 'YELLOW' ? `
-◐ **Value-Add Opportunity**
-- Quality improvement potential adds value
-- Factor in improvement investment ($50-150K typically)
-- Timeline: 6-12 months to see rating improvement
-` : `
-⚠️ **Discount Required**
-- Quality concerns require remediation
-- Factor in turnaround costs and timeline
-- Higher execution risk
-`}
-
-**Negotiation Considerations:**
-- ${provider.chain_organization ? 'Chain sale process likely more formal' : 'Independent owner may offer more flexibility (owner carry-back potential)'}
-- ${provider.is_con_state ? 'CON certificate is key asset - verify transferability' : 'Non-CON market means easier competitor entry'}
-
-Would you like a detailed term sheet framework for this acquisition?`;
-  }
-
-  // Improvement questions
-  if (lowerQuery.includes('improve') || lowerQuery.includes('better') || lowerQuery.includes('action') ||
-      lowerQuery.includes('strategy') || lowerQuery.includes('plan') || lowerQuery.includes('fix') ||
-      lowerQuery.includes('increase') || lowerQuery.includes('boost') || lowerQuery.includes('raise')) {
-
-    const gaps = calculateProviderGaps(provider);
-
-    if (gaps.length === 0) {
-      return `**${name} - Quality Improvement Analysis**
-
-Based on available data, ${name} is performing well across measured quality dimensions.
-
-**Current Strengths:**
-- Overall Score: ${provider.overall_score ?? 'N/A'}/100
-- HCI: ${provider.hci_score ?? 'N/A'}%
-- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
-- Classification: ${classification}
-
-**Maintenance Strategy:**
-1. Sustain current protocols without complacency
-2. Monitor metrics monthly for any early decline
-3. Invest in staff retention to maintain quality
-4. Document best practices for consistency
-5. Build culture of continuous improvement
-
-Would you like a detailed 5-star maintenance plan?`;
+${provider.classification === 'GREEN' ? '✅ Quality profile supports premium valuation' :
+  provider.classification === 'YELLOW' ? '⚠️ Factor in quality improvement costs ($50-150K)' :
+  '🔴 Significant discount warranted for quality remediation'}`
+      };
     }
-
-    return `**${name} - Targeted Improvement Action Plan**
-
-**CURRENT POSITION**
-📊 Overall Score: ${provider.overall_score ?? 'N/A'}/100
-🏷️ Classification: ${classification}
-📍 Location: ${provider.city}, ${provider.state}
-
----
-
-**PRIORITY IMPROVEMENT AREAS FOR ${name.toUpperCase()}**
-
-${gaps.slice(0, 4).map((g, i) => `
-**${i === 0 ? '🔴 #1 CRITICAL' : i === 1 ? '🟠 #2 HIGH' : i === 2 ? '🟡 #3 MEDIUM' : '🔵 #4 STANDARD'}: ${g.metric}**
-
-Current: **${g.current.toFixed(1)}%** | Target: **${g.target}%** | Gap: **${g.gap.toFixed(1)} points**
-Impact Weight: ${g.weight}% of overall score
-
-**SPECIFIC ACTIONS FOR ${name}:**
-${g.specificActions.slice(0, 5).map(action => `• ${action}`).join('\n')}
-
-⏱️ **Timeline:** ${g.timeline}
-💰 **Investment:** ${g.investment}
-
----`).join('\n')}
-
-**${name.toUpperCase()} - 90-DAY IMPROVEMENT CALENDAR**
-
-**WEEKS 1-2: FOUNDATION**
-${gaps[0] ? `
-□ Day 1-3: Assemble improvement team, assign executive sponsor
-□ Day 4-7: Complete baseline audit of ${gaps[0].metric}
-□ Day 8-10: Root cause analysis (staffing? process? training? documentation?)
-□ Day 11-14: Finalize action plan, set daily/weekly targets
-□ Begin daily huddles focused on priority metrics
-` : ''}
-
-**WEEKS 3-4: QUICK WINS**
-${gaps[0] ? `
-□ Deploy first 3 actions from ${gaps[0].metric} list
-□ Create visual dashboards visible to all staff
-□ Implement daily tracking and reporting
-□ Begin staff training sessions
-□ First progress review meeting
-` : ''}
-
-**WEEKS 5-8: ACCELERATION**
-${gaps[0] && gaps[1] ? `
-□ Sustain ${gaps[0].metric} improvements
-□ Begin ${gaps[1].metric} action items
-□ Cross-train staff on new protocols
-□ Peer chart audits for accountability
-□ Mid-point progress review
-` : ''}
-
-**WEEKS 9-12: OPTIMIZATION**
-${gaps.length > 2 ? `
-□ Address remaining gaps: ${gaps.slice(2).map(g => g.metric).join(', ')}
-□ Refine processes based on lessons learned
-□ Build sustainability into daily operations
-□ Prepare for next measurement period
-□ Final progress review and next phase planning
-` : ''}
-
----
-
-**TOTAL INVESTMENT ESTIMATE FOR ${name}**
-
-| Category | Estimated Range |
-|----------|-----------------|
-| Training & Education | $10,000 - $25,000 |
-| Process Improvement | $5,000 - $15,000 |
-| Staffing Adjustments | $15,000 - $40,000 |
-| Technology/Tools | $3,000 - $10,000 |
-| **TOTAL 90-DAY** | **$33,000 - $90,000** |
-
-**EXPECTED ROI:**
-• ${gaps[0] ? `${gaps[0].metric}: ${gaps[0].gap > 10 ? '12-18' : '8-12'} point improvement` : ''}
-• Improved referral relationships
-• Reduced survey risk
-• Enhanced staff morale
-• Better family satisfaction
-
----
-
-**IMMEDIATE NEXT STEP FOR ${name}**
-
-**This week, ${name} should:**
-1. Assign an executive sponsor for quality improvement
-2. ${gaps[0] ? `Pull last 30 days of ${gaps[0].metric.toLowerCase()} data for baseline` : 'Conduct quality audit'}
-3. Schedule kickoff meeting with clinical leadership
-4. Communicate improvement goals to all staff
-
-Would you like me to provide detailed protocols for ${gaps[0]?.metric || 'any specific measure'}?`;
   }
 
-  // Due diligence questions
-  if (lowerQuery.includes('due diligence') || lowerQuery.includes('diligence') || lowerQuery.includes('investigate') ||
-      lowerQuery.includes('research') || lowerQuery.includes('checklist')) {
-    return `**Due Diligence Checklist: ${name}**
-
-**Provider:** ${name}
-**Location:** ${provider.city}, ${provider.state}
-**CCN:** ${provider.ccn}
-
----
-
-**1. QUALITY & CLINICAL (Critical)**
-
-☐ **CMS Quality Measure History (3 years)**
-  - Current HCI: ${provider.hci_score ?? 'Request'}%
-  - Current HVLDL: ${provider.hvldl_score ?? 'Request'}%
-  - Trend analysis: improving/stable/declining
-
-☐ **CAHPS Survey Results (3 years)**
-  - Overall Rating: ${provider.overall_rating_score ?? 'Request'}%
-  - Recommend: ${provider.willing_recommend_score ?? 'Request'}%
-  - Communication: ${provider.communication_score ?? 'Request'}%
-
-☐ **Survey History**
-  - Last state survey date
-  - Deficiency count and severity
-  - Plans of correction status
-  - Any enforcement actions
-
-☐ **Complaint Investigations**
-  - Substantiated complaints (2 years)
-  - Patterns or repeat issues
-  - Resolution documentation
-
----
-
-**2. OPERATIONAL**
-
-☐ **Census Data**
-  - Estimated ADC: ${provider.estimated_adc ?? 'Request'}
-  - ADC trend (3 years)
-  - Seasonality patterns
-  - Payer mix breakdown
-
-☐ **Staffing**
-  - Current staffing levels by discipline
-  - Turnover rates (RN, aide)
-  - Vacancy rates
-  - Contractor utilization
-
-☐ **Service Area**
-  - Counties/ZIP codes served
-  - Drive time mapping
-  - Competitor analysis
-  - Referral source geography
-
----
-
-**3. FINANCIAL**
-
-☐ **Revenue Analysis**
-  - 3 years financial statements
-  - Revenue per patient day
-  - Payer mix trends
-  - Medicare cap liability history
-
-☐ **Cost Structure**
-  - Labor cost ratios
-  - G&A as % of revenue
-  - Technology/infrastructure costs
-  - Marketing spend
-
-☐ **Profitability**
-  - EBITDA margins
-  - Adjusted EBITDA (owner normalization)
-  - Working capital needs
-  - CapEx requirements
-
----
-
-**4. COMPLIANCE & LEGAL**
-
-☐ **Regulatory Status**
-  - Medicare certification current
-  - State license current
-  ${provider.is_con_state ? '- CON certificate review and transferability' : ''}
-  - Accreditation status (if applicable)
-
-☐ **Legal Review**
-  - Pending litigation
-  - OIG exclusion list check (all employees)
-  - Previous settlements or fines
-  - Billing compliance review
-
-☐ **Corporate Structure**
-  - Entity formation documents
-  - Operating agreements
-  - Management contracts
-  - Related party transactions
-
----
-
-**5. HUMAN CAPITAL**
-
-☐ **Key Personnel**
-  - Administrator credentials
-  - Medical Director qualifications
-  - Clinical Director experience
-  - Key staff retention risk
-
-☐ **Employment Matters**
-  - Employee count by classification
-  - Wage/benefit analysis
-  - Union status
-  - Non-compete agreements
-
----
-
-**6. STRATEGIC**
-
-☐ **Market Position**
-  - Market share estimate
-  - Competitive differentiation
-  - Referral relationships
-  - Brand/reputation assessment
-
-☐ **Growth Potential**
-  - Expansion opportunities
-  - New county/market potential
-  - Service line additions
-  - Synergy identification
-
----
-
-**RED FLAGS TO WATCH FOR:**
-
-${provider.overall_score !== null && provider.overall_score < 60 ? '⚠️ Low quality scores may indicate systemic issues\n' : ''}${provider.hci_score !== null && provider.hci_score < 65 ? '⚠️ HCI below 65% suggests clinical protocol gaps\n' : ''}${!provider.chain_organization ? '' : '⚠️ Chain affiliation may mean less deal flexibility\n'}• Declining ADC trend
-• High staff turnover (>50% annual)
-• Recent enforcement actions
-• Pending litigation
-• Medicare cap overpayment history
-• Owner unwilling to provide data
-
----
-
-Would you like me to elaborate on any section?`;
+  // Education/teaching queries
+  if (lowerQuery.includes('explain') || lowerQuery.includes('teach') || lowerQuery.includes('learn') ||
+      lowerQuery.includes('understand') || lowerQuery.includes('what is') || lowerQuery.includes('how does') ||
+      lowerQuery.includes('rating') || lowerQuery.includes('system')) {
+    return generateEducationModule(lowerQuery, provider);
   }
 
-  // Comparison/benchmark questions
-  if (lowerQuery.includes('compare') || lowerQuery.includes('benchmark') || lowerQuery.includes('vs') ||
-      lowerQuery.includes('how does') || lowerQuery.includes('stack up')) {
-    return `**Benchmark Analysis: ${name}**
-
-**Quality Score Benchmarking**
-
-| Metric | ${name} | National Avg | Top 10% | Assessment |
-|--------|---------|--------------|---------|------------|
-| HCI | ${provider.hci_score ?? 'N/A'}% | 78% | 92%+ | ${provider.hci_score ? (provider.hci_score >= 92 ? 'Top 10%' : provider.hci_score >= 78 ? 'Above Avg' : 'Below Avg') : '—'} |
-| HVLDL | ${provider.hvldl_score ?? 'N/A'}% | 82% | 95%+ | ${provider.hvldl_score ? (provider.hvldl_score >= 95 ? 'Top 10%' : provider.hvldl_score >= 82 ? 'Above Avg' : 'Below Avg') : '—'} |
-| Communication | ${provider.communication_score ?? 'N/A'}% | 79% | 88%+ | ${provider.communication_score ? (provider.communication_score >= 88 ? 'Top 10%' : provider.communication_score >= 79 ? 'Above Avg' : 'Below Avg') : '—'} |
-| Overall Rating | ${provider.overall_rating_score ?? 'N/A'}% | 80% | 90%+ | ${provider.overall_rating_score ? (provider.overall_rating_score >= 90 ? 'Top 10%' : provider.overall_rating_score >= 80 ? 'Above Avg' : 'Below Avg') : '—'} |
-| Recommend | ${provider.willing_recommend_score ?? 'N/A'}% | 83% | 92%+ | ${provider.willing_recommend_score ? (provider.willing_recommend_score >= 92 ? 'Top 10%' : provider.willing_recommend_score >= 83 ? 'Above Avg' : 'Below Avg') : '—'} |
-
-**Market Position: ${provider.state}**
-
-- CON State: ${provider.is_con_state ? 'Yes (protected market)' : 'No (open market)'}
-- Estimated ADC: ${provider.estimated_adc ?? 'Unknown'} ${provider.estimated_adc ? (provider.estimated_adc >= 75 ? '(Large)' : provider.estimated_adc >= 35 ? '(Mid-size)' : '(Small)') : ''}
-- Classification: ${classification}
-
-**Competitive Context:**
-${provider.overall_score !== null ? `
-With an overall score of ${provider.overall_score}, ${name} is positioned ${
-  provider.overall_score >= 80 ? 'as a quality leader in the market' :
-  provider.overall_score >= 65 ? 'competitively with opportunity for differentiation' :
-  'below market leaders, requiring improvement to compete effectively'
-}.
-` : 'Quality data needed for competitive positioning.'}
-
-**Strategic Implications:**
-${classification === 'GREEN' ?
-  '✓ Premium positioning supports strong valuation and easier integration' :
-  classification === 'YELLOW' ?
-  '◐ Middle-tier positioning requires improvement plan for competitive strength' :
-  '⚠️ Below-market quality requires significant investment to compete'
-}
-
-Would you like a detailed competitive analysis for the ${provider.state} market?`;
-  }
-
-  return null;
-}
-
-// ============================================
-// GENERAL KNOWLEDGE RESPONSE ENGINE
-// ============================================
-
-function generateGeneralResponse(input: string, pathname: string, provider: ProviderData | null): string {
-  const lowerInput = input.toLowerCase();
-
-  // If we have provider context and they ask a general question, contextualize it
-  if (provider && (pathname.startsWith('/provider/') || lowerInput.includes('this'))) {
-    const specificResponse = generateProviderSpecificAnalysis(provider, input);
-    if (specificResponse) return specificResponse;
-  }
-
-  // ============================================
-  // HEALTH INSPECTIONS DOMAIN
-  // ============================================
-  if (lowerInput.includes('health inspection') || lowerInput.includes('survey') ||
-      lowerInput.includes('deficien') || lowerInput.includes('citation')) {
-    const domain = FiveStarDataset.Domains.HealthInspections;
-
-    if (lowerInput.includes('scor') || lowerInput.includes('point') || lowerInput.includes('how')) {
-      return `**Health Inspection Deficiency Scoring**
-
-Each citation receives points based on a **Scope × Severity** grid:
-
-**Severity Levels:**
-- **No Harm** (Potential for harm): Low points
-- **Actual Harm**: Medium points
-- **Immediate Jeopardy**: Highest points (100-150)
-
-**Scope Levels:**
-- **Isolated**: Single occurrence
-- **Pattern**: Multiple occurrences
-- **Widespread**: Systemic issue
-
-**Point Examples:**
-${domain.CalculationSteps[0].Examples?.slice(0, 6).map(e => `- Level **${e.Level}** (${e.Description}): **${e.Points} points**`).join('\n')}
-
-**Important Multipliers:**
-- ${domain.CalculationSteps[0].AbuseMultiplier}
-- Repeat deficiencies add 50% extra points
-
-${provider ? `\n**For ${provider.provider_name}:** Check survey history in due diligence.` : ''}`;
-    }
-
-    return `**Health Inspections Domain**
-
-${domain.Description}
-
-**Star Cut Points:**
-${domain.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points`).join('\n')}
-
-**Key Facts:**
-- Annual surveys + complaint investigations
-- 3-year weighted average (60%/30%/10%)
-- Abuse citations double the point value`;
-  }
-
-  // ============================================
-  // STAFFING DOMAIN
-  // ============================================
-  if (lowerInput.includes('staff') || lowerInput.includes('hprd') || lowerInput.includes('nurse') ||
-      lowerInput.includes('pbj') || lowerInput.includes('payroll')) {
-    const domain = FiveStarDataset.Domains.Staffing;
-
-    if (lowerInput.includes('weekend')) {
-      return `**Weekend Staffing Requirements (2023+)**
-
-Starting in 2023, CMS requires weekend RN coverage for 4+ star ratings.
-
-**Requirement:** ${domain.Post2023Rules[0]}
-
-**Strategy:**
-1. Ensure at least 1 RN on duty every weekend day
-2. Document weekend hours in PBJ accurately
-3. Per-diem RN pools for coverage
-
-**Impact:** Facilities with zero weekend RN hours capped at 3 stars.`;
-    }
-
-    if (lowerInput.includes('turnover')) {
-      return `**Staff Turnover Metrics (2023+)**
-
-**New Rule:** ${domain.Post2023Rules[1]}
-
-**Turnover Thresholds:**
-- >60% annual turnover = potential 1-star deduction
-- Data from PBJ submissions
-
-**Reduction Strategies:**
-1. Competitive wages
-2. Flexible scheduling
-3. Recognition programs
-4. Career advancement
-5. Better ratios
-6. Supportive management`;
-    }
-
-    return `**Staffing Domain**
-
-**Metrics:**
-${domain.Metrics.map(m => `- ${m}`).join('\n')}
-
-**Formula:** \`${domain.Formula}\`
-
-**Star Thresholds:**
-${domain.StarThresholds.map(s => `- **${s.Stars} Stars**: RN ${s.RNPoints}pts, Total ${s.TotalPoints}pts`).join('\n')}
-
-**2023 Changes:**
-${domain.Post2023Rules.map(r => `⚠️ ${r}`).join('\n')}`;
-  }
-
-  // ============================================
-  // QUALITY MEASURES
-  // ============================================
-  if (lowerInput.includes('quality measure') || lowerInput.includes('qm') ||
-      lowerInput.includes('hci') || lowerInput.includes('hospice care index') ||
-      lowerInput.includes('hvldl') || lowerInput.includes('cahps')) {
-    return `**Hospice Quality Measures**
-
-**Core Measures:**
-
-1. **Hospice Care Index (HCI)** - Composite clinical quality
-   - Timeliness of care
-   - Pain assessment
-   - Dyspnea screening
-   - Bowel regimen
-   - Comprehensive assessment
-   - **Target:** ≥85% for excellence
-
-2. **HVLDL** - Visits in Last Days of Life
-   - RN/MSW visits in final 3 days
-   - **Target:** ≥90% for excellence
-
-3. **CAHPS Survey** - Family experience
-   - Communication
-   - Symptom management
-   - Emotional support
-   - Overall rating
-   - Would recommend
-   - **Target:** ≥85% across measures
-
-${provider ? `\n**${provider.provider_name} Scores:**
-- HCI: ${provider.hci_score ?? 'N/A'}%
-- HVLDL: ${provider.hvldl_score ?? 'N/A'}%
-- Communication: ${provider.communication_score ?? 'N/A'}%
-- Overall: ${provider.overall_rating_score ?? 'N/A'}%` : ''}
-
-Ask about specific measures for detailed improvement strategies!`;
-  }
-
-  // ============================================
-  // M&A AND VALUATION
-  // ============================================
-  if (lowerInput.includes('value') || lowerInput.includes('valuation') || lowerInput.includes('m&a') ||
-      lowerInput.includes('acquisition') || lowerInput.includes('buy') || lowerInput.includes('deal')) {
-    return `**Hospice M&A Valuation**
-
-**Valuation Methods:**
-
-1. **Per-ADC Method**
-   - Conservative: $25,000/ADC
-   - Market: $35,000/ADC
-   - Premium: $45,000/ADC
-
-2. **Revenue Multiple**
-   - 0.8-1.2x trailing revenue
-   - Premium for 4+ star quality
-
-3. **EBITDA Multiple**
-   - 3.5-5.5x adjusted EBITDA
-   - Higher for scale (ADC 75+)
-
-**Value Drivers:**
-✓ Quality scores (15-25% premium/discount range)
-✓ CON state location (+15%)
-✓ ADC growth trajectory
-✓ Payer mix (Medicare %)
-✓ Staffing stability
-✓ Market position
-
-${provider ? `\n**For ${provider.provider_name}:**
-- ADC: ${provider.estimated_adc ?? 'Unknown'}
-- Quality Score: ${provider.overall_score ?? 'Unknown'}
-- CON Protected: ${provider.is_con_state ? 'Yes' : 'No'}
-- Classification: ${provider.classification}` : ''}
-
-Would you like a detailed valuation analysis?`;
-  }
-
-  // ============================================
-  // IMPROVEMENT STRATEGIES
-  // ============================================
-  if (lowerInput.includes('improve') || lowerInput.includes('better') || lowerInput.includes('increase') ||
-      lowerInput.includes('boost') || lowerInput.includes('raise')) {
-    const strategies = FiveStarDataset.ImprovementStrategies.EffectivePaths;
-
-    return `**Quality Improvement Strategies**
-
-**Quick Wins (30 days):**
-1. Documentation audit and training
-2. Same-day admission visits
-3. Daily active phase huddles
-4. Family communication protocols
-5. Pain assessment standardization
-
-**Medium-Term (90 days):**
-1. Comprehensive staff training
-2. EHR workflow optimization
-3. Quality dashboard implementation
-4. Care coordinator oversight
-5. Peer chart reviews
-
-**Long-Term (6-12 months):**
-1. Culture transformation
-2. Best-practice adoption
-3. Sustained monitoring
-4. Continuous improvement
-
-**ROI Expectations:**
-- 10-15 point improvement in 90 days achievable
-- Full program: $50-150K investment
-- Return: 3-5x through better referrals, lower risk
-
-${provider ? `\n**For ${provider.provider_name}:** I can create a specific improvement plan based on their metrics. Ask me to "create an improvement plan for this provider."` : ''}`;
-  }
-
-  // ============================================
-  // DEFAULT RESPONSE
-  // ============================================
-  return `Hi! I'm **Phill**, your hospice M&A intelligence assistant.
-
-${provider ? `**Currently viewing:** ${provider.provider_name} (${provider.city}, ${provider.state})
-**Classification:** ${provider.classification}
-**Overall Score:** ${provider.overall_score ?? 'N/A'}
-
-I can provide specific analysis for this provider. Try:
-- "Analyze this provider"
-- "What's the valuation?"
-- "Create an improvement plan"
-- "Run due diligence"
-- "Compare to benchmarks"
-
----
-
-` : ''}**I can help with:**
-
-📊 **Quality Analysis**
-- Hospice Care Index (HCI)
-- CAHPS survey measures
-- Quality improvement strategies
-
-💰 **M&A Intelligence**
-- Valuation methodologies
-- Due diligence guidance
-- Market analysis
-
-📈 **Improvement Planning**
-- Specific action plans
-- ROI analysis
-- Timeline projections
-
-**Try asking:**
-- "How is HCI calculated?"
-- "What are the staffing requirements?"
-- "Explain hospice quality measures"
-- "How do quality scores affect value?"`;
-}
-
-// ============================================
-// QUICK ACTIONS
-// ============================================
-
-function getQuickActions(pathname: string, provider: ProviderData | null): QuickAction[] {
-  // Provider-specific quick actions
+  // If on a provider page but no specific query matched, give provider-specific intro
   if (provider && pathname.startsWith('/provider/')) {
-    return [
-      { label: '5-Star Path', prompt: `How can ${provider.provider_name} get to 5-star status?`, icon: <Star className="w-4 h-4" /> },
-      { label: 'Full Analysis', prompt: 'Give me a comprehensive analysis of this provider', icon: <BarChart3 className="w-4 h-4" /> },
-      { label: 'Valuation', prompt: 'What is the estimated valuation for this hospice?', icon: <DollarSign className="w-4 h-4" /> },
-      { label: 'Improve', prompt: 'Create an improvement action plan for this provider', icon: <TrendingUp className="w-4 h-4" /> },
-    ];
+    return {
+      type: 'text',
+      content: `# Welcome! I'm Phill, your ${provider.provider_name} expert.
+
+I've loaded all available data for **${provider.provider_name}** and I'm ready to help you with:
+
+## 🎯 What I Can Do For You
+
+### 📊 **Analyze This Provider**
+Get a complete breakdown of quality scores, market position, and M&A potential.
+
+### ⭐ **5-Star Roadmap**
+I'll create a detailed, week-by-week plan showing exactly how ${provider.provider_name} can achieve 5-star status, including:
+- Specific action items (not generic advice)
+- Investment requirements
+- Timeline with milestones
+- Priority-ranked improvements
+
+### 💰 **Valuation Analysis**
+Understand what ${provider.provider_name} is worth using ADC, revenue, and EBITDA multiples.
+
+### 📚 **Learn & Understand**
+I can teach you about quality measures, the 5-star system, and what drives hospice value.
+
+---
+
+**Quick Start:** Click "5-Star Path" below or ask me anything about ${provider.provider_name}!
+
+**Current Status:**
+- Score: ${provider.overall_score ?? 'N/A'}/100
+- Classification: ${provider.classification || 'Unknown'}
+- Location: ${provider.city}, ${provider.state}`
+    };
   }
 
-  // Quality measures page
-  if (pathname === '/quality-measures') {
-    return [
-      { label: 'HCI Explained', prompt: 'Explain the Hospice Care Index in detail', icon: <Activity className="w-4 h-4" /> },
-      { label: 'CAHPS Guide', prompt: 'How do CAHPS surveys work?', icon: <Star className="w-4 h-4" /> },
-      { label: 'Improve QM', prompt: 'How can I improve quality measure scores?', icon: <TrendingUp className="w-4 h-4" /> },
-      { label: 'Thresholds', prompt: 'What are the star rating thresholds?', icon: <Target className="w-4 h-4" /> },
-    ];
-  }
+  // Default response without provider
+  return {
+    type: 'text',
+    content: `# Hi! I'm Phill, your Hospice M&A Intelligence Expert.
 
-  // Deals/valuation pages
-  if (pathname === '/deals' || pathname === '/valuation') {
-    return [
-      { label: 'Valuation Methods', prompt: 'Explain hospice valuation methodologies', icon: <Calculator className="w-4 h-4" /> },
-      { label: 'Due Diligence', prompt: 'What should I look for in due diligence?', icon: <FileText className="w-4 h-4" /> },
-      { label: 'Quality Impact', prompt: 'How do quality scores affect valuation?', icon: <Star className="w-4 h-4" /> },
-      { label: 'Deal Structure', prompt: 'What deal structures work for hospice M&A?', icon: <DollarSign className="w-4 h-4" /> },
-    ];
-  }
+I'm not just a chatbot - I'm an interactive teaching and planning tool that can:
 
-  // Default actions
-  return [
-    { label: 'Quality Measures', prompt: 'Explain hospice quality measures', icon: <Activity className="w-4 h-4" /> },
-    { label: 'Improve Ratings', prompt: 'How can I improve quality ratings?', icon: <TrendingUp className="w-4 h-4" /> },
-    { label: 'Valuation', prompt: 'How are hospices valued for M&A?', icon: <DollarSign className="w-4 h-4" /> },
-    { label: 'M&A Strategy', prompt: 'What makes a good acquisition target?', icon: <Target className="w-4 h-4" /> },
-  ];
+## 🎓 **Teach & Educate**
+- Explain the 5-star rating system in depth
+- Break down quality measures (HCI, HVLDL, CAHPS)
+- Show you exactly how ratings are calculated
+
+## 📋 **Create Detailed Plans**
+- Generate provider-specific improvement roadmaps
+- Build week-by-week action plans
+- Calculate investment requirements and ROI
+
+## 💰 **Analyze & Value**
+- Valuation using multiple methodologies
+- Due diligence checklists
+- Market and competitive analysis
+
+---
+
+**To get started:**
+1. Navigate to a specific provider page for provider-specific analysis
+2. Or ask me to explain any topic (try: "explain the 5-star system")
+
+**Popular Topics:**
+- "How does the 5-star rating work?"
+- "What are the quality measures?"
+- "How can a hospice improve its rating?"`
+  };
 }
 
 // ============================================
-// PHILL ASSISTANT COMPONENT
+// VISUAL COMPONENTS
+// ============================================
+
+function ScoreCardDisplay({ cards }: { cards: ScoreCard[] }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 my-4">
+      {cards.map((card, i) => (
+        <div
+          key={i}
+          className={`p-3 rounded-lg border ${
+            card.status === 'excellent' ? 'bg-emerald-500/10 border-emerald-500/30' :
+            card.status === 'good' ? 'bg-blue-500/10 border-blue-500/30' :
+            card.status === 'warning' ? 'bg-amber-500/10 border-amber-500/30' :
+            'bg-red-500/10 border-red-500/30'
+          }`}
+        >
+          <div className="text-xs text-[var(--color-text-muted)] mb-1">{card.metric}</div>
+          <div className="flex items-end justify-between">
+            <div className={`text-xl font-bold ${
+              card.status === 'excellent' ? 'text-emerald-400' :
+              card.status === 'good' ? 'text-blue-400' :
+              card.status === 'warning' ? 'text-amber-400' :
+              'text-red-400'
+            }`}>
+              {card.current}%
+            </div>
+            <div className="text-xs text-[var(--color-text-muted)]">
+              Target: {card.target}%
+            </div>
+          </div>
+          {card.gap > 0 && (
+            <div className="mt-2 h-1.5 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${
+                  card.status === 'excellent' ? 'bg-emerald-500' :
+                  card.status === 'good' ? 'bg-blue-500' :
+                  card.status === 'warning' ? 'bg-amber-500' :
+                  'bg-red-500'
+                }`}
+                style={{ width: `${Math.min(100, (card.current / card.target) * 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActionItemsDisplay({ items, onToggle }: { items: ActionItem[], onToggle: (id: string) => void }) {
+  return (
+    <div className="my-4 space-y-2">
+      <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+        <ClipboardList className="w-4 h-4 text-[var(--color-turquoise-400)]" />
+        Action Items
+      </h4>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          onClick={() => onToggle(item.id)}
+          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+            item.completed ? 'bg-emerald-500/10' : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'
+          }`}
+        >
+          <div className={`mt-0.5 ${item.completed ? 'text-emerald-400' : 'text-[var(--color-text-muted)]'}`}>
+            {item.completed ? <CircleCheck className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+          </div>
+          <div className="flex-1">
+            <p className={`text-sm ${item.completed ? 'line-through text-[var(--color-text-muted)]' : ''}`}>
+              {item.text}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-xs px-2 py-0.5 rounded ${
+                item.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
+                item.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                item.priority === 'medium' ? 'bg-amber-500/20 text-amber-400' :
+                'bg-blue-500/20 text-blue-400'
+              }`}>
+                {item.priority}
+              </span>
+              <span className="text-xs text-[var(--color-text-muted)]">{item.timeline}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TimelineDisplay({ phases }: { phases: TimelinePhase[] }) {
+  const [expandedPhase, setExpandedPhase] = useState<string | null>('1');
+
+  return (
+    <div className="my-4">
+      <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+        <Calendar className="w-4 h-4 text-[var(--color-turquoise-400)]" />
+        Implementation Timeline
+      </h4>
+      <div className="space-y-2">
+        {phases.map((phase) => (
+          <div
+            key={phase.phase}
+            className={`rounded-lg border overflow-hidden ${
+              phase.status === 'current' ? 'border-[var(--color-turquoise-500)]' :
+              phase.status === 'completed' ? 'border-emerald-500/30' :
+              'border-[var(--color-border)]'
+            }`}
+          >
+            <button
+              onClick={() => setExpandedPhase(expandedPhase === phase.phase ? null : phase.phase)}
+              className={`w-full flex items-center justify-between p-3 ${
+                phase.status === 'current' ? 'bg-[var(--color-turquoise-500)]/10' :
+                phase.status === 'completed' ? 'bg-emerald-500/10' :
+                'bg-[var(--color-bg-secondary)]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                  phase.status === 'current' ? 'bg-[var(--color-turquoise-500)] text-white' :
+                  phase.status === 'completed' ? 'bg-emerald-500 text-white' :
+                  'bg-[var(--color-bg-tertiary)]'
+                }`}>
+                  {phase.phase}
+                </div>
+                <div className="text-left">
+                  <div className="font-medium text-sm">{phase.title}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">{phase.weeks}</div>
+                </div>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform ${expandedPhase === phase.phase ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {expandedPhase === phase.phase && (
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: 'auto' }}
+                  exit={{ height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="p-3 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">
+                    <ul className="space-y-1">
+                      {phase.tasks.map((task, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <ChevronRight className="w-4 h-4 text-[var(--color-turquoise-400)] flex-shrink-0 mt-0.5" />
+                          <span>{task}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EducationModuleDisplay({ module }: { module: NonNullable<PhillResponse['educationModule']> }) {
+  const [activeSection, setActiveSection] = useState(0);
+
+  return (
+    <div className="my-4">
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap className="w-5 h-5 text-[var(--color-turquoise-400)]" />
+        <h3 className="font-semibold">{module.title}</h3>
+      </div>
+
+      {/* Section tabs */}
+      <div className="flex gap-1 mb-4 overflow-x-auto pb-2">
+        {module.sections.map((section, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveSection(i)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              activeSection === i
+                ? 'bg-[var(--color-turquoise-500)] text-white'
+                : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'
+            }`}
+          >
+            {section.heading}
+          </button>
+        ))}
+      </div>
+
+      {/* Active section content */}
+      <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+        <h4 className="font-semibold mb-3">{module.sections[activeSection].heading}</h4>
+        <div className="text-sm whitespace-pre-wrap leading-relaxed">
+          {module.sections[activeSection].content}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-4">
+        <button
+          onClick={() => setActiveSection(Math.max(0, activeSection - 1))}
+          disabled={activeSection === 0}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-[var(--color-bg-secondary)] disabled:opacity-50"
+        >
+          <ChevronRight className="w-4 h-4 rotate-180" /> Previous
+        </button>
+        <button
+          onClick={() => setActiveSection(Math.min(module.sections.length - 1, activeSection + 1))}
+          disabled={activeSection === module.sections.length - 1}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-[var(--color-turquoise-500)] text-white disabled:opacity-50"
+        >
+          Next <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// MAIN COMPONENT
 // ============================================
 
 export function PhillAssistant() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; response?: PhillResponse; content?: string }>>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const { provider } = usePhillContext();
-
-  const quickActions = getQuickActions(pathname, provider);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && !isMinimized) {
-      inputRef.current?.focus();
-    }
-  }, [isOpen, isMinimized]);
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
 
-  // Reset messages when provider changes
   useEffect(() => {
     if (provider) {
       setMessages([]);
+      setActionItems([]);
     }
   }, [provider?.ccn]);
 
@@ -1480,47 +812,38 @@ export function PhillAssistant() {
     const text = messageText || input.trim();
     if (!text) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: text,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
     setInput('');
     setIsTyping(true);
 
-    // Simulate thinking time
-    await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 600));
+    await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400));
 
-    // Generate response with provider context
-    let response: string;
+    const response = generateResponse(text, provider, pathname);
 
-    if (provider) {
-      const specificResponse = generateProviderSpecificAnalysis(provider, text);
-      response = specificResponse || generateGeneralResponse(text, pathname, provider);
-    } else {
-      response = generateGeneralResponse(text, pathname, null);
+    if (response.actionItems) {
+      setActionItems(response.actionItems);
     }
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
+    setMessages(prev => [...prev, { role: 'assistant', response }]);
     setIsTyping(false);
-  }, [input, pathname, provider]);
+  }, [input, provider, pathname]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const toggleActionItem = (id: string) => {
+    setActionItems(prev => prev.map(item =>
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
   };
+
+  const quickActions = provider ? [
+    { label: '⭐ 5-Star Path', prompt: `Create a detailed plan for ${provider.provider_name} to achieve 5-star status` },
+    { label: '📊 Full Analysis', prompt: `Give me a complete analysis of ${provider.provider_name}` },
+    { label: '💰 Valuation', prompt: `What is ${provider.provider_name} worth?` },
+    { label: '📚 Learn', prompt: 'Teach me about the 5-star rating system' },
+  ] : [
+    { label: '📚 5-Star System', prompt: 'Explain how the 5-star rating system works' },
+    { label: '📈 Improvement', prompt: 'How can a hospice improve its quality rating?' },
+    { label: '💰 Valuation', prompt: 'How are hospices valued for M&A?' },
+  ];
 
   if (pathname === '/landing') return null;
 
@@ -1530,38 +853,34 @@ export function PhillAssistant() {
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
+            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
           >
-            <MessageSquare className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full text-xs font-bold flex items-center justify-center border-2 border-white">
-              P
-            </span>
+            <Brain className="w-6 h-6" />
             {provider && (
-              <span className="absolute -bottom-1 -left-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                <Building2 className="w-3 h-3 text-white" />
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                <Building2 className="w-3 h-3" />
               </span>
             )}
-            <div className="absolute right-full mr-3 px-3 py-1.5 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border)] shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <span className="text-sm font-medium">
-                {provider ? `Ask about ${provider.provider_name}` : 'Ask Phill - M&A Expert'}
-              </span>
-            </div>
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Chat Window */}
+      {/* Main Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 w-[480px] max-w-[calc(100vw-48px)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+            className={`fixed z-50 rounded-2xl overflow-hidden shadow-2xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] ${
+              isExpanded
+                ? 'inset-4 md:inset-8'
+                : 'bottom-6 right-6 w-[520px] max-w-[calc(100vw-48px)]'
+            }`}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[var(--color-turquoise-500)] to-[var(--color-turquoise-600)] text-white">
@@ -1572,16 +891,16 @@ export function PhillAssistant() {
                 <div>
                   <h3 className="font-semibold">Phill</h3>
                   <p className="text-xs text-white/80">
-                    {provider ? `Analyzing ${provider.provider_name.substring(0, 25)}...` : 'M&A Intelligence Assistant'}
+                    {provider ? `Analyzing ${provider.provider_name.substring(0, 30)}` : 'M&A Intelligence Expert'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setIsMinimized(!isMinimized)}
+                  onClick={() => setIsExpanded(!isExpanded)}
                   className="p-2 rounded-lg hover:bg-white/20 transition-colors"
                 >
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isMinimized ? 'rotate-180' : ''}`} />
+                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
@@ -1592,155 +911,150 @@ export function PhillAssistant() {
               </div>
             </div>
 
-            {/* Provider Context Banner */}
-            {provider && !isMinimized && (
-              <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20">
-                <div className="flex items-center gap-2 text-sm">
-                  <Building2 className="w-4 h-4 text-purple-500" />
-                  <span className="font-medium text-purple-400">{provider.provider_name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    provider.classification === 'GREEN' ? 'bg-emerald-500/20 text-emerald-400' :
-                    provider.classification === 'YELLOW' ? 'bg-amber-500/20 text-amber-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {provider.classification}
-                  </span>
+            {/* Provider Badge */}
+            {provider && (
+              <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-purple-400" />
+                  <span className="font-medium text-sm text-purple-400">{provider.provider_name}</span>
                 </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  provider.classification === 'GREEN' ? 'bg-emerald-500/20 text-emerald-400' :
+                  provider.classification === 'YELLOW' ? 'bg-amber-500/20 text-amber-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {provider.overall_score ?? '?'}/100
+                </span>
               </div>
             )}
 
-            {/* Chat Body */}
-            <AnimatePresence>
-              {!isMinimized && (
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: 'auto' }}
-                  exit={{ height: 0 }}
-                  className="overflow-hidden"
-                >
-                  {/* Messages */}
-                  <div className="h-[420px] overflow-y-auto p-4 space-y-4">
-                    {messages.length === 0 ? (
-                      <div className="text-center py-4">
-                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-turquoise-500)]/10 flex items-center justify-center">
-                          <Brain className="w-8 h-8 text-[var(--color-turquoise-500)]" />
-                        </div>
-                        <h4 className="font-semibold mb-2">Hi, I'm Phill!</h4>
-                        <p className="text-sm text-[var(--color-text-muted)] mb-1">
-                          {provider
-                            ? `I've loaded ${provider.provider_name}'s data. Ask me anything specific about this provider.`
-                            : 'Your hospice M&A intelligence assistant.'
-                          }
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] mb-4">
-                          {provider
-                            ? 'I can analyze quality, estimate value, create improvement plans, and generate due diligence checklists.'
-                            : 'I know quality measures, valuation, improvement strategies, and M&A best practices.'
-                          }
-                        </p>
-
-                        {/* Quick Actions */}
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {quickActions.map((action, i) => (
-                            <button
-                              key={i}
-                              onClick={() => handleSend(action.prompt)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors border border-[var(--color-border)]"
-                            >
-                              {action.icon}
-                              {action.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {messages.map((msg) => (
-                          <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-[90%] p-3 rounded-2xl ${
-                                msg.role === 'user'
-                                  ? 'bg-[var(--color-turquoise-500)] text-white rounded-tr-sm'
-                                  : 'bg-[var(--color-bg-secondary)] rounded-tl-sm'
-                              }`}
-                            >
-                              <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                {msg.content.split(/(\*\*.*?\*\*|\`.*?\`|\|.*\|)/g).map((part, i) => {
-                                  if (part.startsWith('**') && part.endsWith('**')) {
-                                    return <strong key={i}>{part.slice(2, -2)}</strong>;
-                                  }
-                                  if (part.startsWith('`') && part.endsWith('`')) {
-                                    return <code key={i} className="px-1 py-0.5 rounded bg-black/20 text-xs font-mono">{part.slice(1, -1)}</code>;
-                                  }
-                                  if (part.startsWith('|') && part.endsWith('|')) {
-                                    return <span key={i} className="font-mono text-xs">{part}</span>;
-                                  }
-                                  return part;
-                                })}
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-
-                        {isTyping && (
-                          <div className="flex justify-start">
-                            <div className="bg-[var(--color-bg-secondary)] p-3 rounded-2xl rounded-tl-sm flex items-center gap-2">
-                              <Loader2 className="w-4 h-4 animate-spin text-[var(--color-turquoise-500)]" />
-                              <span className="text-xs text-[var(--color-text-muted)]">Analyzing...</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div ref={messagesEndRef} />
-                      </>
-                    )}
+            {/* Messages */}
+            <div className={`overflow-y-auto p-4 space-y-4 ${isExpanded ? 'h-[calc(100%-180px)]' : 'h-[450px]'}`}>
+              {messages.length === 0 ? (
+                <div className="text-center py-6">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-[var(--color-turquoise-500)]/20 to-purple-500/20 flex items-center justify-center">
+                    <Brain className="w-10 h-10 text-[var(--color-turquoise-400)]" />
                   </div>
+                  <h4 className="font-bold text-lg mb-2">Hi! I'm Phill</h4>
+                  <p className="text-sm text-[var(--color-text-muted)] mb-1">
+                    {provider
+                      ? `I've loaded ${provider.provider_name}'s data and I'm ready to create a detailed 5-star roadmap.`
+                      : 'Your interactive hospice M&A intelligence expert.'}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-6">
+                    I can teach, analyze, and create detailed action plans.
+                  </p>
 
-                  {/* Input */}
-                  <div className="p-4 border-t border-[var(--color-border)]">
-                    <div className="flex items-center gap-2">
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder={provider ? `Ask about ${provider.provider_name}...` : 'Ask about quality, value, M&A...'}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:border-[var(--color-turquoise-500)] focus:ring-1 focus:ring-[var(--color-turquoise-500)] transition-colors text-sm"
-                      />
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {quickActions.map((action, i) => (
                       <button
-                        onClick={() => handleSend()}
-                        disabled={!input.trim() || isTyping}
-                        className="p-2.5 rounded-xl bg-[var(--color-turquoise-500)] text-white hover:bg-[var(--color-turquoise-600)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        key={i}
+                        onClick={() => handleSend(action.prompt)}
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-bg-secondary)] hover:bg-[var(--color-turquoise-500)] hover:text-white transition-colors border border-[var(--color-border)]"
                       >
-                        <Send className="w-4 h-4" />
+                        {action.label}
                       </button>
-                    </div>
-
-                    {/* Quick Actions when chat has messages */}
-                    {messages.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {quickActions.slice(0, 3).map((action, i) => (
-                          <button
-                            key={i}
-                            onClick={() => handleSend(action.prompt)}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
-                          >
-                            {action.icon}
-                            {action.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                </motion.div>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`${msg.role === 'user' ? 'flex justify-end' : ''}`}>
+                      {msg.role === 'user' ? (
+                        <div className="max-w-[85%] p-3 rounded-2xl rounded-tr-sm bg-[var(--color-turquoise-500)] text-white text-sm">
+                          {msg.content}
+                        </div>
+                      ) : msg.response ? (
+                        <div className="bg-[var(--color-bg-secondary)] rounded-2xl rounded-tl-sm p-4 max-w-full">
+                          {msg.response.title && (
+                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                              {msg.response.type === 'plan' && <Target className="w-5 h-5 text-[var(--color-turquoise-400)]" />}
+                              {msg.response.type === 'education' && <GraduationCap className="w-5 h-5 text-[var(--color-turquoise-400)]" />}
+                              {msg.response.title}
+                            </h3>
+                          )}
+
+                          {msg.response.scoreCards && (
+                            <ScoreCardDisplay cards={msg.response.scoreCards} />
+                          )}
+
+                          <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                            {msg.response.content.split('\n').map((line, j) => {
+                              if (line.startsWith('# ')) return <h1 key={j} className="text-xl font-bold mt-4 mb-2">{line.slice(2)}</h1>;
+                              if (line.startsWith('## ')) return <h2 key={j} className="text-lg font-semibold mt-3 mb-2">{line.slice(3)}</h2>;
+                              if (line.startsWith('### ')) return <h3 key={j} className="font-semibold mt-2 mb-1">{line.slice(4)}</h3>;
+                              if (line.startsWith('**') && line.endsWith('**')) return <p key={j} className="font-semibold">{line.slice(2, -2)}</p>;
+                              if (line.startsWith('- ') || line.startsWith('• ')) return <li key={j} className="ml-4">{line.slice(2)}</li>;
+                              if (line.startsWith('|')) return <code key={j} className="block text-xs font-mono bg-black/20 px-2 py-1 rounded">{line}</code>;
+                              if (line.trim() === '') return <br key={j} />;
+                              return <p key={j}>{line}</p>;
+                            })}
+                          </div>
+
+                          {msg.response.educationModule && (
+                            <EducationModuleDisplay module={msg.response.educationModule} />
+                          )}
+
+                          {msg.response.timeline && (
+                            <TimelineDisplay phases={msg.response.timeline} />
+                          )}
+
+                          {msg.response.actionItems && actionItems.length > 0 && (
+                            <ActionItemsDisplay items={actionItems} onToggle={toggleActionItem} />
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+
+                  {isTyping && (
+                    <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Analyzing...</span>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </>
               )}
-            </AnimatePresence>
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-bg-primary)]">
+              <div className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder={provider ? `Ask about ${provider.provider_name}...` : 'Ask me anything...'}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:border-[var(--color-turquoise-500)] focus:ring-1 focus:ring-[var(--color-turquoise-500)] text-sm"
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isTyping}
+                  className="px-4 rounded-xl bg-[var(--color-turquoise-500)] text-white hover:bg-[var(--color-turquoise-600)] disabled:opacity-50 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+
+              {messages.length > 0 && (
+                <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
+                  {quickActions.slice(0, 3).map((action, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSend(action.prompt)}
+                      className="px-3 py-1.5 rounded-lg text-xs bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] whitespace-nowrap"
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
