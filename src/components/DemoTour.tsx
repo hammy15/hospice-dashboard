@@ -24,7 +24,7 @@ interface DemoStep {
 const demoSteps: DemoStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to Hospice Tracker',
+    title: 'Welcome to My 5 Star Report',
     description: 'The M&A intelligence platform built for Aavencare to identify, analyze, and acquire hospice agencies across the United States. Let\'s walk through how to find your next acquisition opportunity.',
     icon: <Sparkles className="w-8 h-8" />,
     stats: [
@@ -167,7 +167,7 @@ const demoSteps: DemoStep[] = [
   {
     id: 'ready',
     title: 'You\'re Ready to Go!',
-    description: 'You now know how to use Hospice Tracker to find, analyze, and acquire hospice agencies. Start by exploring the Dashboard or search for providers in your target markets. Good luck growing Aavencare\'s footprint!',
+    description: 'You now know how to use My 5 Star Report to find, analyze, and acquire hospice agencies. Start by exploring the Dashboard or search for providers in your target markets. Good luck growing Aavencare\'s footprint!',
     icon: <CheckCircle className="w-8 h-8" />,
     stats: [
       { label: 'Time Saved', value: '80%' },

@@ -289,7 +289,7 @@ export default function AccountPage() {
         </div>
 
         <p className="text-[var(--color-text-muted)] text-sm mb-6">
-          Use API keys to integrate Hospice Tracker data with your tools and workflows.
+          Use API keys to integrate My 5 Star Report data with your tools and workflows.
         </p>
 
         {/* New Key Alert */}

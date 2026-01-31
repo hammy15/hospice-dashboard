@@ -104,7 +104,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Hospice Tracker', options)
+    self.registration.showNotification(data.title || 'My 5 Star Report', options)
   );
 });
 

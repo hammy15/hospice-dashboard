@@ -573,7 +573,7 @@ export default function ReportsPage() {
 
           {/* Footer */}
           <div className="p-6 bg-gray-50 text-center text-sm text-gray-500">
-            <p>Hospice Tracker M&A Intelligence Platform</p>
+            <p>My 5 Star Report M&A Intelligence Platform</p>
             <p>Report generated on {new Date(reportData.generatedAt).toLocaleString()}</p>
             <p className="mt-2 text-xs">This report is for informational purposes only. Data sourced from CMS and proprietary analysis.</p>
           </div>
