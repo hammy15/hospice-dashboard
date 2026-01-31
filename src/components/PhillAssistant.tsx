@@ -7,9 +7,16 @@ import {
   MessageSquare, X, Send, Sparkles, ChevronDown,
   Activity, Star, Target, HelpCircle, Lightbulb,
   TrendingUp, AlertTriangle, CheckCircle, Loader2,
-  BookOpen, Calculator, Shield, Users, FileText
+  BookOpen, Calculator, Shield, Users, FileText,
+  DollarSign, Building2, BarChart3, Heart, Brain,
+  Zap, Clock, Award, Percent, ArrowRight
 } from 'lucide-react';
-import FiveStarDataset, { queryKnowledge, getActionPlan, getImprovementRecommendations } from '@/lib/knowledge';
+import FiveStarDataset, {
+  queryKnowledge,
+  getActionPlan,
+  getImprovementRecommendations,
+  searchKnowledge
+} from '@/lib/knowledge';
 
 interface Message {
   id: string;
@@ -24,480 +31,1076 @@ interface QuickAction {
   icon: React.ReactNode;
 }
 
-// Generate comprehensive responses using the knowledge base
+// ============================================
+// COMPREHENSIVE KNOWLEDGE RESPONSE ENGINE
+// ============================================
+
 function generateResponse(input: string, pathname: string): string {
   const lowerInput = input.toLowerCase();
+  const words = lowerInput.split(/\s+/);
 
-  // Health Inspections
-  if (lowerInput.includes('health inspection') || lowerInput.includes('survey') || lowerInput.includes('deficien')) {
+  // ============================================
+  // HEALTH INSPECTIONS DOMAIN
+  // ============================================
+  if (lowerInput.includes('health inspection') || lowerInput.includes('survey') ||
+      lowerInput.includes('deficien') || lowerInput.includes('citation') ||
+      lowerInput.includes('casper') || lowerInput.includes('complaint')) {
     const domain = FiveStarDataset.Domains.HealthInspections;
-    return `**Health Inspections Domain**
 
-The Health Inspections domain is the **foundation** of the overall star rating (40% implicit weight).
+    // Deficiency scoring details
+    if (lowerInput.includes('scor') || lowerInput.includes('point') || lowerInput.includes('how')) {
+      return `**Health Inspection Deficiency Scoring**
 
-**Data Source:** State surveys via CASPER system
+Each citation receives points based on a **Scope × Severity** grid:
 
-**How Deficiencies Are Scored:**
-${domain.CalculationSteps[0].Examples?.slice(0, 5).map(e => `- Level ${e.Level}: ${e.Description} = ${e.Points} points`).join('\n')}
+**Severity Levels:**
+- **No Harm** (Potential for harm): Low points
+- **Actual Harm**: Medium points
+- **Immediate Jeopardy**: Highest points (100-150)
 
-**Calculation Formula:**
-\`Total = (Cycle1 × 0.6) + (Cycle2 × 0.3) + (Cycle3 × 0.1)\`
+**Scope Levels:**
+- **Isolated**: Single occurrence
+- **Pattern**: Multiple occurrences
+- **Widespread**: Systemic issue
 
-**Star Cut Points (Q4 2023):**
-${domain.StarCutPoints.map(s => `- ${s.Stars} Stars: ${s.ScoreRange} points`).join('\n')}
+**Point Examples:**
+${domain.CalculationSteps[0].Examples?.slice(0, 6).map(e => `- Level **${e.Level}** (${e.Description}): **${e.Points} points**`).join('\n')}
 
-**Key Facts:**
-- Abuse citations double the point value
+**Important Multipliers:**
+- ${domain.CalculationSteps[0].AbuseMultiplier}
 - Repeat deficiencies add 50% extra points
 - Substantiated complaints count at full weight
 
-Would you like specific strategies to reduce deficiencies?`;
+**Cycle Weighting Formula:**
+\`Total = (Cycle1 × 0.6) + (Cycle2 × 0.3) + (Cycle3 × 0.1)\`
+
+Would you like strategies to reduce deficiency points?`;
+    }
+
+    return `**Health Inspections Domain** (Foundation of Overall Rating)
+
+**Data Source:** ${domain.DataSource}
+
+${domain.Description}
+
+**Star Cut Points (Current):**
+${domain.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points - ${s.Description}`).join('\n')}
+
+**Calculation Process:**
+${domain.CalculationSteps.map((step, i) => `${i + 1}. **${step.Name}**: ${step.Details}`).join('\n')}
+
+**Key Facts:**
+- Annual surveys + complaint investigations + infection control surveys
+- 3-year weighted average (60%/30%/10%)
+- Abuse citations double the point value
+- Top 10% = 5 stars, Bottom 10% = 1 star
+
+**Quick Win:** Mock surveys identify citation-prone areas before state visits.
+
+Ask about specific deficiency types or reduction strategies!`;
   }
 
-  // Staffing Domain
-  if (lowerInput.includes('staff') && (lowerInput.includes('domain') || lowerInput.includes('rating') || lowerInput.includes('hprd') || lowerInput.includes('hour'))) {
+  // ============================================
+  // STAFFING DOMAIN - COMPREHENSIVE
+  // ============================================
+  if (lowerInput.includes('staff') || lowerInput.includes('hprd') || lowerInput.includes('nurse') ||
+      lowerInput.includes('rn hour') || lowerInput.includes('pbj') || lowerInput.includes('payroll')) {
     const domain = FiveStarDataset.Domains.Staffing;
-    return `**Staffing Domain**
 
-**Data Source:** PBJ (Payroll-Based Journal) quarterly submissions (mandatory since 2016)
+    // Weekend staffing specific
+    if (lowerInput.includes('weekend')) {
+      return `**Weekend Staffing Requirements (2023+)**
+
+Starting in 2023, CMS added weekend staffing to the rating:
+
+**New Rule:**
+${domain.Post2023Rules[0]}
+
+**Why This Matters:**
+- Many facilities reduced weekend RN coverage
+- CMS found correlation with worse outcomes
+- Now required for 4+ star ratings
+
+**Strategy:**
+1. Ensure at least 1 RN on duty every weekend day
+2. Document weekend hours in PBJ accurately
+3. Consider per-diem RN pools for coverage
+
+**Impact:** Facilities with zero weekend RN hours are capped at 3 stars overall.`;
+    }
+
+    // Turnover specific
+    if (lowerInput.includes('turnover')) {
+      return `**Staff Turnover Metrics (Added 2023)**
+
+CMS now tracks and penalizes high turnover:
+
+**New Rule:**
+${domain.Post2023Rules[1]}
+
+**Turnover Calculation:**
+- Annual RN turnover rate
+- Annual total nurse turnover rate
+- Aide turnover rate
+
+**Impact:**
+- >60% annual turnover = potential 1-star deduction
+- Data comes from PBJ submissions
+- Retention now directly affects ratings
+
+**Strategies to Reduce Turnover:**
+1. Competitive wages (market analysis)
+2. Flexible scheduling
+3. Recognition programs
+4. Career advancement paths
+5. Better nurse-to-patient ratios
+6. Supportive management culture
+
+**ROI:** Every percentage point reduction in turnover saves ~$4,000-$5,000 per nurse per year.`;
+    }
+
+    return `**Staffing Domain** (Critical for Star Rating)
+
+**Data Source:** ${domain.DataSource}
 
 **Key Metrics Tracked:**
 ${domain.Metrics.map(m => `- ${m}`).join('\n')}
 
-**How HPRD is Calculated:**
-\`Adjusted HPRD = Actual Hours / Expected Hours (case-mix adjusted)\`
+**HPRD Calculation:**
+\`${domain.Formula}\`
+
+**Case-Mix Adjustment:** ${domain.CaseMixAdjustment}
 
 **Star Thresholds:**
-${domain.StarThresholds.map(s => `- ${s.Stars} Stars: RN ${s.RNPoints} pts, Total ${s.TotalPoints} pts`).join('\n')}
+${domain.StarThresholds.map(s => `- **${s.Stars} Stars**: RN Points ${s.RNPoints}, Total Points ${s.TotalPoints}`).join('\n')}
 
-**2023 Rule Changes:**
-${domain.Post2023Rules.map(r => `- ${r}`).join('\n')}
+**2023 Rule Changes (Important!):**
+${domain.Post2023Rules.map(r => `⚠️ ${r}`).join('\n')}
 
-**Pro Tips:**
-1. Weekend RN staffing is now required for 4+ stars
-2. High turnover (>60%) can cost you a star
-3. Data is audited - accuracy matters
+**Practical Targets:**
+- RN: 0.75+ HPRD for 5 stars
+- Total: 4.10+ HPRD for 5 stars
+- Weekend RN coverage: Required for 4+ stars
+- Turnover: Keep below 60% annual
 
-Would you like strategies to improve staffing scores?`;
+**Quick Win:** PBJ audit to ensure all hours are captured correctly (many facilities under-report).`;
   }
 
-  // Falls QM
+  // ============================================
+  // QUALITY MEASURES - INDIVIDUAL MEASURES
+  // ============================================
+
+  // Falls (Long-Stay and Short-Stay)
   if (lowerInput.includes('fall')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Falls'));
+    const longStayMeasure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Falls'));
+    const shortStayMeasure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Falls'));
     const actions = getActionPlan('falls');
-    return `**Falls with Major Injury** - Weight: ${measure?.Weight} (HIGHEST IMPACT)
 
-This is the **most heavily weighted** quality measure. Improving falls can significantly boost your star rating.
+    return `**Falls with Major Injury** - THE HIGHEST IMPACT MEASURE
 
-**Star Thresholds (Long-Stay):**
-- 5 Stars: ${measure?.Thresholds.FiveStar}
-- 4 Stars: ${measure?.Thresholds.FourStar}
-- 3 Stars: ${measure?.Thresholds.ThreeStar}
-- 2 Stars: ${measure?.Thresholds.TwoStar}
-- 1 Star: ${measure?.Thresholds.OneStar}
+This is the **most heavily weighted** quality measure. Improving falls can have the biggest impact on your QM star rating.
 
-**National Average:** ${measure?.NationalAverage}
+**Long-Stay Measure:**
+- **Weight:** ${longStayMeasure?.Weight} (HIGHEST)
+- **National Average:** ${longStayMeasure?.NationalAverage}
+- **5 Stars:** ${longStayMeasure?.Thresholds.FiveStar}
+- **4 Stars:** ${longStayMeasure?.Thresholds.FourStar}
+- **3 Stars:** ${longStayMeasure?.Thresholds.ThreeStar}
+- **2 Stars:** ${longStayMeasure?.Thresholds.TwoStar}
+- **1 Star:** ${longStayMeasure?.Thresholds.OneStar}
 
-**Action Plan to Reduce Falls:**
-${actions.map((a, i) => a).join('\n')}
-
-**Quick Wins:**
-- Hourly rounding protocols (FREE)
-- Medication reviews for fall-risk drugs
-- Non-slip footwear requirement
-- Low beds for high-risk residents`;
-  }
-
-  // Pressure Ulcers QM
-  if (lowerInput.includes('pressure') || lowerInput.includes('ulcer') || lowerInput.includes('wound')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Pressure'));
-    const actions = getActionPlan('pressure');
-    return `**Pressure Ulcers (High Risk)** - Weight: ${measure?.Weight} (HIGH IMPACT)
-
-**Star Thresholds:**
-- 5 Stars: ${measure?.Thresholds.FiveStar}
-- 4 Stars: ${measure?.Thresholds.FourStar}
-- 3 Stars: ${measure?.Thresholds.ThreeStar}
-- 2 Stars: ${measure?.Thresholds.TwoStar}
-- 1 Star: ${measure?.Thresholds.OneStar}
-
-**National Average:** ${measure?.NationalAverage}
+**Short-Stay Measure:**
+- **Weight:** ${shortStayMeasure?.Weight}
+- **National Average:** ${shortStayMeasure?.NationalAverage}
+- **5 Stars:** ${shortStayMeasure?.Thresholds.FiveStar}
 
 **Action Plan:**
 ${actions.map(a => a).join('\n')}
 
-**Key Prevention Strategies:**
-- Repositioning every 2 hours (document it!)
-- Pressure-redistributing surfaces
-- Nutrition optimization (protein, vitamin C, zinc)
-- Daily skin assessments`;
+**Quick Wins (Free/Low-Cost):**
+✓ Hourly rounding protocols
+✓ Medication reviews (sedatives, blood pressure meds)
+✓ Non-slip footwear requirements
+✓ Low beds for high-risk residents
+✓ Bed/chair alarms
+✓ Clear pathways (remove clutter)
+
+**ROI:** Reducing falls by 1% can improve QM rating by 0.3-0.5 stars.`;
   }
 
-  // UTI QM
-  if (lowerInput.includes('uti') || lowerInput.includes('urinary') || lowerInput.includes('catheter') && lowerInput.includes('infection')) {
+  // Pressure Ulcers
+  if (lowerInput.includes('pressure') || lowerInput.includes('ulcer') || lowerInput.includes('wound') ||
+      lowerInput.includes('skin') || lowerInput.includes('bedsore')) {
+    const longStayMeasure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Pressure'));
+    const shortStayMeasure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Pressure'));
+    const actions = getActionPlan('pressure');
+
+    return `**Pressure Ulcers** - HIGH IMPACT MEASURE
+
+**Long-Stay (High Risk Residents):**
+- **Weight:** ${longStayMeasure?.Weight}
+- **National Average:** ${longStayMeasure?.NationalAverage}
+- **Formula:** ${longStayMeasure?.Formula}
+- **5 Stars:** ${longStayMeasure?.Thresholds.FiveStar}
+- **4 Stars:** ${longStayMeasure?.Thresholds.FourStar}
+- **3 Stars:** ${longStayMeasure?.Thresholds.ThreeStar}
+- **1 Star:** ${longStayMeasure?.Thresholds.OneStar}
+
+**Short-Stay (New or Worsened):**
+- **Weight:** ${shortStayMeasure?.Weight}
+- **National Average:** ${shortStayMeasure?.NationalAverage}
+- **5 Stars:** ${shortStayMeasure?.Thresholds.FiveStar}
+- Risk-adjusted: Yes
+
+**Action Plan:**
+${actions.map(a => a).join('\n')}
+
+**Prevention Protocol:**
+1. **Repositioning** - Every 2 hours (document it!)
+2. **Surfaces** - Pressure-redistributing mattresses
+3. **Nutrition** - Protein, vitamin C, zinc optimization
+4. **Moisture** - Manage incontinence promptly
+5. **Assessment** - Daily skin checks, Braden Scale
+6. **Documentation** - Photo at admission (establishes baseline)
+
+**Key Insight:** Many pressure ulcers are "acquired" at admission but not documented. Photo documentation protects your rates.`;
+  }
+
+  // UTI
+  if (lowerInput.includes('uti') || lowerInput.includes('urinary tract') ||
+      (lowerInput.includes('urinary') && lowerInput.includes('infection'))) {
     const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('UTI'));
     const actions = getActionPlan('uti');
-    return `**Urinary Tract Infections** - Weight: ${measure?.Weight}
+
+    return `**Urinary Tract Infections (UTI)** - HIGH IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **Impact:** HIGH
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
 
 **Star Thresholds:**
-- 5 Stars: ${measure?.Thresholds.FiveStar}
-- 4 Stars: ${measure?.Thresholds.FourStar}
-- 3 Stars: ${measure?.Thresholds.ThreeStar}
-- 2 Stars: ${measure?.Thresholds.TwoStar}
-- 1 Star: ${measure?.Thresholds.OneStar}
-
-**National Average:** ${measure?.NationalAverage}
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
 
 **Action Plan:**
 ${actions.map(a => a).join('\n')}
 
-**Key Strategies:**
-- Minimize catheter use (biggest impact)
-- Remove catheters as soon as possible
-- Proper catheter care protocols
-- Hydration tracking`;
+**Prevention Strategies:**
+1. **Minimize catheter use** - Single biggest impact
+2. **Remove catheters ASAP** - Daily assessment for removal
+3. **Catheter care protocols** - Proper insertion and maintenance
+4. **Hydration tracking** - Adequate fluids prevent UTIs
+5. **Perineal care** - Proper hygiene protocols
+
+**Key Insight:** Catheter-associated UTIs (CAUTIs) are the most common. Reducing catheter days is the fastest path to improvement.`;
   }
 
-  // Antipsychotics QM
-  if (lowerInput.includes('antipsychotic') || lowerInput.includes('medication') || lowerInput.includes('psych')) {
-    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Antipsychotic'));
-    const actions = getActionPlan('antipsychotic');
-    return `**Antipsychotic Medication Use** - Weight: ${measure?.Weight}
+  // Catheter (separate from UTI)
+  if (lowerInput.includes('catheter') && !lowerInput.includes('infection') && !lowerInput.includes('uti')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Catheter'));
+    const actions = getActionPlan('catheter');
+
+    return `**Catheter Use** - MEDIUM IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
 
 **Star Thresholds:**
-- 5 Stars: ${measure?.Thresholds.FiveStar}
-- 4 Stars: ${measure?.Thresholds.FourStar}
-- 3 Stars: ${measure?.Thresholds.ThreeStar}
-- 2 Stars: ${measure?.Thresholds.TwoStar}
-- 1 Star: ${measure?.Thresholds.OneStar}
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
 
-**National Average:** ${measure?.NationalAverage}
+**Action Plan:**
+${actions.map(a => a).join('\n')}
 
-**Note:** Excludes residents with schizophrenia, Huntington's, or Tourette's.
+**Removal Protocol:**
+1. Daily catheter necessity review
+2. Nurse-driven removal protocol
+3. Bladder training programs
+4. Intermittent catheterization option
+5. Condom catheters for appropriate patients
+
+**Quick Win:** Many catheters remain in place due to inertia, not medical necessity. Implement daily "catheter necessity" rounds.`;
+  }
+
+  // Antipsychotics
+  if (lowerInput.includes('antipsychotic') || lowerInput.includes('psych') ||
+      lowerInput.includes('behavior') || lowerInput.includes('dementia')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Antipsychotic'));
+    const actions = getActionPlan('antipsychotic');
+
+    return `**Antipsychotic Medication Use** - MEDIUM IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
+
+**Star Thresholds:**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Note:** ${measure?.Notes}
 
 **Action Plan:**
 ${actions.map(a => a).join('\n')}
 
 **Non-Pharmacological Alternatives:**
-- Person-centered dementia care
-- Environmental modifications
-- Activity programming
-- Music/art therapy`;
+✓ Person-centered dementia care
+✓ Environmental modifications (calm spaces)
+✓ Activity programming (music, art therapy)
+✓ Pain management (behaviors often indicate pain)
+✓ Sleep hygiene improvements
+✓ Staff training on redirection techniques
+
+**Gradual Dose Reduction (GDR):**
+- Required by CMS for ongoing antipsychotic use
+- Try reduction every 6 months unless contraindicated
+- Document medical necessity if continued`;
   }
 
-  // Quality Measures Overview
-  if (lowerInput.includes('quality measure') || lowerInput.includes('qm') || (lowerInput.includes('measure') && lowerInput.includes('list'))) {
+  // Restraints
+  if (lowerInput.includes('restraint')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Restraint'));
+    const actions = getActionPlan('restraint');
+
+    return `**Physical Restraints** - MEDIUM IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
+
+**Star Thresholds:**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Action Plan:**
+${actions.map(a => a).join('\n')}
+
+**Restraint-Free Alternatives:**
+✓ Low beds with floor mats
+✓ Motion sensors and alarms
+✓ Increased supervision/rounding
+✓ 1:1 observation when needed
+✓ Environmental modifications
+✓ Address root causes (pain, delirium)
+
+**Key Insight:** Most restraint use can be eliminated with proper alternatives. CMS targets restraint-free care.`;
+  }
+
+  // Depression
+  if (lowerInput.includes('depress') || lowerInput.includes('mood') || lowerInput.includes('mental health')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('Depress'));
+
+    return `**Depressive Symptoms** - MEDIUM IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
+
+**Star Thresholds:**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Detection:**
+- PHQ-9 screening on admission
+- Quarterly rescreening
+- Staff trained to recognize signs
+
+**Treatment Strategies:**
+✓ Meaningful activity programs
+✓ Social engagement opportunities
+✓ Natural light exposure
+✓ Exercise programs
+✓ Psychiatric consultation
+✓ Medication review (some meds cause depression)
+✓ Family involvement
+
+**Key Insight:** Depression is under-recognized in SNFs. Better screening often reveals higher rates initially, but enables treatment.`;
+  }
+
+  // ADL Decline
+  if (lowerInput.includes('adl') || lowerInput.includes('function') || lowerInput.includes('self-care') ||
+      lowerInput.includes('decline') || lowerInput.includes('mobility')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.find(m => m.Name.includes('ADL'));
+
+    return `**ADL Decline (Self-Care)** - MEDIUM IMPACT MEASURE
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
+
+**Star Thresholds:**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Prevention Strategies:**
+✓ Restorative nursing programs
+✓ Physical therapy referrals
+✓ Occupational therapy for ADLs
+✓ Avoid "doing for" residents
+✓ Adaptive equipment provision
+✓ Ambulation programs
+
+**Key Insight:** Maintaining function requires active effort. Without intervention, decline is the default trajectory.`;
+  }
+
+  // Rehospitalization
+  if (lowerInput.includes('rehospital') || lowerInput.includes('readmission') ||
+      lowerInput.includes('hospital') || lowerInput.includes('transfer')) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Rehospital'));
+
+    return `**Rehospitalizations** - SHORT-STAY MEASURE (HIGH IMPACT)
+
+- **Weight:** ${measure?.Weight}
+- **National Average:** ${measure?.NationalAverage}
+- **Formula:** ${measure?.Formula}
+- **Risk Adjusted:** Yes
+
+**Star Thresholds:**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Reduction Strategies:**
+1. **INTERACT Program** - Interventions to Reduce Acute Care Transfers
+2. Thorough admission assessments
+3. Medication reconciliation
+4. Early warning sign recognition
+5. On-site physician/NP coverage
+6. Family education on expectations
+
+**Key Programs:**
+- INTERACT: evidence-based toolkit to reduce transfers
+- Hospital partnerships for warm handoffs
+- Telehealth for after-hours consultations
+
+**ROI:** Each avoided hospitalization saves $15,000-$25,000 and improves your measure.`;
+  }
+
+  // Functional Improvement (Short-Stay)
+  if (lowerInput.includes('improvement') && (lowerInput.includes('function') || lowerInput.includes('rehab'))) {
+    const measure = FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.find(m => m.Name.includes('Functional'));
+
+    return `**Functional Improvement** - SHORT-STAY MEASURE (HIGHER IS BETTER)
+
+- **Weight:** ${measure?.Weight}
+- **Impact:** HIGH
+- **National Average:** ${measure?.NationalAverage}
+- **Risk Adjusted:** Yes
+
+**Star Thresholds (Higher is Better!):**
+- **5 Stars:** ${measure?.Thresholds.FiveStar}
+- **4 Stars:** ${measure?.Thresholds.FourStar}
+- **3 Stars:** ${measure?.Thresholds.ThreeStar}
+- **2 Stars:** ${measure?.Thresholds.TwoStar}
+- **1 Star:** ${measure?.Thresholds.OneStar}
+
+**Improvement Strategies:**
+✓ Intensive therapy programs
+✓ Individualized rehab goals
+✓ Motivational interviewing
+✓ Family involvement in therapy
+✓ Restorative nursing carry-over
+✓ Proper equipment provision
+
+**Key Insight:** This is one of the few "higher is better" measures. Strong therapy programs directly improve this metric.`;
+  }
+
+  // ============================================
+  // QUALITY MEASURES OVERVIEW
+  // ============================================
+  if (lowerInput.includes('quality measure') || lowerInput.includes('qm') ||
+      (lowerInput.includes('measure') && lowerInput.includes('list')) ||
+      lowerInput.includes('28 measure') || lowerInput.includes('all measure')) {
     const qm = FiveStarDataset.Domains.QualityMeasures;
+
     return `**CMS Quality Measures Overview**
 
-There are **${qm.TotalMeasures} measures** total (${qm.LongStayMeasures} Long-Stay + ${qm.ShortStayMeasures} Short-Stay).
+There are **${qm.TotalMeasures} measures** total:
+- **${qm.LongStayMeasures} Long-Stay** (residents >100 days)
+- **${qm.ShortStayMeasures} Short-Stay** (post-acute/rehab)
 
-**Long-Stay Measures (residents >100 days):**
+**Data Source:** ${qm.DataSource}
+**Risk Adjustment:** ${qm.RiskAdjustment}
+**Max Points:** ${qm.TotalPointsMax}
+
+**Long-Stay Measures by Impact:**
 ${qm.LongStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
 
-**Short-Stay Measures (post-acute):**
+**Short-Stay Measures by Impact:**
 ${qm.ShortStayMeasuresList.map(m => `- **${m.Name}** - Weight: ${m.Weight} (${m.Impact})`).join('\n')}
 
 **QM Star Cut Points:**
-${qm.StarCutPoints.map(s => `- ${s.Stars} Stars: ${s.ScoreRange} points`).join('\n')}
+${qm.StarCutPoints.map(s => `- **${s.Stars} Stars**: ${s.ScoreRange} points`).join('\n')}
 
-**Highest Impact Measures to Focus On:**
-1. Falls with Major Injury (Long-Stay) - Weight 3.0
-2. Pressure Ulcers - Weight 2.5
-3. UTIs - Weight 2.0
+**Topped-Out Measures (Not Scored):**
+${qm.ToppedOutMeasures.map(m => `- ${m}`).join('\n')}
 
-Ask me about any specific measure for detailed thresholds and action plans!`;
+**Focus Areas for Maximum Impact:**
+1. Falls with Major Injury (weight 3.0)
+2. Pressure Ulcers (weight 2.5)
+3. UTIs (weight 2.0)
+4. Rehospitalizations (weight 1.5)
+
+Ask about any specific measure for detailed thresholds and action plans!`;
   }
 
-  // Star Rating Improvement
-  if (lowerInput.includes('improve') && (lowerInput.includes('star') || lowerInput.includes('rating'))) {
-    const strategies = FiveStarDataset.ImprovementStrategies.EffectivePaths;
-    return `**How to Improve Star Ratings**
-
-${strategies.map(s => `**${s.FromTo} Stars:**
-Timeline: ${s.Timeline}
-Key Actions:
-${s.KeyActions.slice(0, 4).map(a => `- ${a}`).join('\n')}
-`).join('\n')}
-
-**High-ROI Quick Wins:**
-1. MDS coding audit (errors drop scores 10-20%)
-2. Fall prevention protocols (highest-weight QM)
-3. Catheter removal initiative
-4. Antipsychotic reduction program
-
-**Evidence:** Per AHCA data, a 1-star improvement yields $50K+ annual revenue from better referrals.
-
-What's your current star rating? I can give specific recommendations.`;
-  }
-
-  // Cost-effective improvements
-  if (lowerInput.includes('cost') || lowerInput.includes('budget') || lowerInput.includes('cheap') || lowerInput.includes('afford')) {
-    const tactics = FiveStarDataset.ImprovementStrategies.CostEffectiveTactics;
-    return `**Cost-Effective Improvement Strategies**
-
-**Low-Cost (Under $10K/year):**
-${tactics[0].Examples.map(e => `- ${e}`).join('\n')}
-ROI: ${tactics[0].ROI}
-
-**Medium-Cost ($10K-$50K/year):**
-${tactics[1].Examples.map(e => `- ${e}`).join('\n')}
-
-**Avoid These Pitfalls:**
-${FiveStarDataset.ImprovementStrategies.AvoidPitfalls.map(p => `- ${p}`).join('\n')}
-
-**Free Resources:**
-- CMS webinars and YouTube tutorials
-- QIO technical assistance (free consulting)
-- AHCA Quality Initiative materials
-
-**ROI Fact:** Staffing investments return 2-3x via lower penalties and reduced turnover costs.`;
-  }
-
-  // Overall Rating Calculation
-  if (lowerInput.includes('overall') || lowerInput.includes('calculate') || (lowerInput.includes('how') && lowerInput.includes('star'))) {
+  // ============================================
+  // OVERALL RATING CALCULATION
+  // ============================================
+  if (lowerInput.includes('overall') || lowerInput.includes('calculate') ||
+      (lowerInput.includes('how') && lowerInput.includes('star') && lowerInput.includes('rating')) ||
+      lowerInput.includes('combined') || lowerInput.includes('total rating')) {
     const overall = FiveStarDataset.Domains.Overall;
+
     return `**Overall Star Rating Calculation**
 
 The overall rating combines all three domains:
 
+**${overall.Integration}**
+
 **Calculation Steps:**
-${overall.CalculationMethod.map(s => s).join('\n')}
+${overall.CalculationMethod.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
-**Point Conversion:**
-${overall.PointConversion.map(p => `- ${p.TotalPoints} points = ${p.OverallStars} stars`).join('\n')}
+**Point Conversion to Stars:**
+${overall.PointConversion.map(p => `- **${p.TotalPoints} points** → ${p.OverallStars} stars`).join('\n')}
 
-**Important Caps:**
-${overall.Caps.map(c => `- ${c}`).join('\n')}
+**Important Caps & Limits:**
+${overall.Caps.map(c => `⚠️ ${c}`).join('\n')}
 
-**Key Insight:** Health Inspections is the BASE - you can only go up from there based on Staffing and QM performance.
+**Key Insights:**
+1. Health Inspections is the BASE - you can only improve from there
+2. Poor staffing OR poor QM can cap your rating
+3. Special Focus Facilities are limited to 1 star
+4. Weekend RN coverage required for 4+ stars (2023+)
 
-Would you like help with a specific domain?`;
+**Strategic Implication:**
+If your Health Inspection rating is low, that's your ceiling. Fix citations first, then optimize Staffing and QM.`;
   }
 
-  // Resources
-  if (lowerInput.includes('resource') || lowerInput.includes('guide') || lowerInput.includes('document') || lowerInput.includes('reference')) {
+  // ============================================
+  // IMPROVEMENT STRATEGIES
+  // ============================================
+  if (lowerInput.includes('improve') && (lowerInput.includes('star') || lowerInput.includes('rating'))) {
+    const strategies = FiveStarDataset.ImprovementStrategies.EffectivePaths;
+
+    return `**Star Rating Improvement Strategies**
+
+${strategies.slice(0, 3).map(s => `**${s.FromTo} Stars** (${s.Timeline}):
+${s.Focus}
+
+Key Actions:
+${s.KeyActions.slice(0, 4).map((a, i) => `${i + 1}. ${a}`).join('\n')}`).join('\n\n')}
+
+**Universal Quick Wins:**
+1. **MDS Coding Audit** - Errors can drop scores 10-20%
+2. **Fall Prevention** - Highest-weight QM
+3. **Catheter Reduction** - Easy wins available
+4. **Mock Surveys** - Find citations before state does
+
+**Evidence:**
+- 1-star improvement → $50K+ annual revenue (better referrals)
+- 5-star facilities have 5-10% higher occupancy
+
+What's your current star rating? I can give specific recommendations.`;
+  }
+
+  // Cost-effective strategies
+  if (lowerInput.includes('cost') || lowerInput.includes('budget') || lowerInput.includes('cheap') ||
+      lowerInput.includes('afford') || lowerInput.includes('free') || lowerInput.includes('low cost')) {
+    const tactics = FiveStarDataset.ImprovementStrategies.CostEffectiveTactics;
+
+    return `**Cost-Effective Improvement Strategies**
+
+**Low-Cost (Under $10K/year):**
+${tactics[0].Examples.map(e => `✓ ${e}`).join('\n')}
+**ROI:** ${tactics[0].ROI}
+
+**Medium-Cost ($10K-$50K/year):**
+${tactics[1].Examples.map(e => `✓ ${e}`).join('\n')}
+
+**Free Resources:**
+- CMS webinars and YouTube tutorials
+- QIO technical assistance (free consulting!)
+- AHCA Quality Initiative materials
+- State association resources
+
+**Pitfalls to Avoid:**
+${FiveStarDataset.ImprovementStrategies.AvoidPitfalls.map(p => `✗ ${p}`).join('\n')}
+
+**Best ROI Investments:**
+1. MDS coding training (immediate impact)
+2. Fall prevention program (highest-weight QM)
+3. Wound care protocols
+4. Catheter reduction initiative
+
+**Fact:** Staffing investments return 2-3x via lower penalties and reduced turnover costs.`;
+  }
+
+  // ============================================
+  // M&A AND VALUATION CONTEXT
+  // ============================================
+  if (lowerInput.includes('value') || lowerInput.includes('valuation') || lowerInput.includes('acquisition') ||
+      lowerInput.includes('m&a') || lowerInput.includes('buy') || lowerInput.includes('sell') ||
+      lowerInput.includes('deal') || lowerInput.includes('invest')) {
+    return `**Star Ratings & Facility Valuation**
+
+Star ratings directly impact facility value through multiple channels:
+
+**Occupancy Impact:**
+- 5-star: Premium occupancy, waitlists common
+- 3-star: Market-rate occupancy
+- 1-2 star: Occupancy challenges, discounting needed
+- **Spread:** 5-10% occupancy difference between 1★ and 5★
+
+**Revenue Impact:**
+- Higher occupancy = more revenue
+- Better payer mix (Medicare/private pay vs. Medicaid)
+- SNF VBP payments (up to 2% Medicare adjustment)
+- Premium rates possible with quality reputation
+
+**Valuation Multiples:**
+- 5-star facilities: Premium multiples (1.2-1.5x typical)
+- 1-2 star facilities: Discounted multiples (0.6-0.8x)
+- Turnaround potential: Buy low-star, improve, exit at premium
+
+**Due Diligence Focus Areas:**
+1. Current star ratings (overall and component)
+2. Trajectory (improving or declining?)
+3. Specific deficiency types
+4. Staffing stability
+5. QM trends over 4 quarters
+
+**M&A Strategy:**
+- **Value-Add Play:** Acquire 2-3 star facility, implement improvements, exit at 4-5 stars
+- **Timeline:** 12-24 months for meaningful improvement
+- **Risk:** Regulatory issues can cap upside
+
+Want details on specific valuation factors?`;
+  }
+
+  // ============================================
+  // COMPLIANCE AND REGULATORY
+  // ============================================
+  if (lowerInput.includes('compliance') || lowerInput.includes('regulat') || lowerInput.includes('cms') ||
+      lowerInput.includes('sff') || lowerInput.includes('special focus')) {
+    return `**Compliance & Regulatory Information**
+
+**Special Focus Facility (SFF) Program:**
+- Facilities with poor inspection history
+- Subject to increased survey frequency
+- Limited to 1-star overall rating
+- Candidacy status also public
+
+**Key Regulatory Requirements:**
+1. Annual standard surveys
+2. Complaint investigations (any time)
+3. PBJ quarterly submissions
+4. MDS timely submission
+5. QAPI program
+
+**Compliance Best Practices:**
+✓ Mock surveys quarterly
+✓ Self-reported incident analysis
+✓ QAPI committee active
+✓ Staff competency training
+✓ Policy and procedure updates
+
+**CMS Enforcement Actions:**
+- Civil Money Penalties (CMPs)
+- Denial of Payment for New Admissions (DPNA)
+- Termination from Medicare/Medicaid
+- State monitoring
+
+**Resources:**
+- CMS State Operations Manual
+- F-Tag Interpretive Guidelines
+- QIO consultation (free)
+
+**Key Insight:** Proactive compliance is far cheaper than reactive penalties.`;
+  }
+
+  // ============================================
+  // RESOURCES AND REFERENCES
+  // ============================================
+  if (lowerInput.includes('resource') || lowerInput.includes('guide') || lowerInput.includes('document') ||
+      lowerInput.includes('reference') || lowerInput.includes('where can i') || lowerInput.includes('link')) {
     const resources = FiveStarDataset.Resources;
-    return `**CMS Five-Star Resources**
+
+    return `**CMS Five-Star Resources & References**
 
 **Official CMS Documents:**
-${resources.OfficialCMS.slice(0, 3).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
+${resources.OfficialCMS.slice(0, 4).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
 
 **Guides and Tools:**
 ${resources.GuidesAndTools.slice(0, 3).map(r => `- [${r.Title}](${r.URL})`).join('\n')}
 
-**Research Studies:**
+**Research & Studies:**
 ${resources.ResearchAndStudies.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
 
 **Training:**
 ${resources.TrainingAndWebinars.map(r => `- [${r.Title}](${r.URL})`).join('\n')}
 
-Visit our **/learn** page for a comprehensive walkthrough of the entire system!`;
+**Free Assistance:**
+- Quality Improvement Organizations (QIOs) - Free consulting
+- State health department resources
+- AHCA/NCAL quality resources
+
+Visit our **/learn** page for a comprehensive knowledge base!`;
   }
 
-  // What-if simulator
-  if (lowerInput.includes('what-if') || lowerInput.includes('simulator') || lowerInput.includes('simulate')) {
+  // What-if simulator help
+  if (lowerInput.includes('what-if') || lowerInput.includes('simulator') || lowerInput.includes('simulate') ||
+      lowerInput.includes('project') || lowerInput.includes('forecast')) {
     return `**What-If Simulator**
 
-Located on the **Quality Measures page**, the simulator lets you:
-
-1. **Adjust individual QM performance** with sliders
-2. **See real-time projected star changes**
-3. **Identify highest-impact improvements**
-4. **Model scenarios before investing**
+Our simulator lets you model star rating improvements:
 
 **How to Use:**
-1. Go to Quality Measures page (/quality-measures)
-2. Select "What-If Simulator" tab
-3. Adjust sliders for each measure
-4. Watch the projected rating update
+1. Go to **Quality Measures** page (/quality-measures)
+2. Select **"What-If Simulator"** tab
+3. Adjust sliders for each QM
+4. Watch projected rating update in real-time
 
-**Pro Tip:** Focus on high-weight measures first:
-- Falls with Major Injury (weight: 3.0)
-- Pressure Ulcers (weight: 2.5)
-- UTIs (weight: 2.0)
+**Strategy Tips:**
+1. **Focus on high-weight measures first:**
+   - Falls with Major Injury (3.0 weight)
+   - Pressure Ulcers (2.5 weight)
+   - UTIs (2.0 weight)
 
-These give you the biggest bang for your improvement efforts!`;
+2. **Model realistic improvements:**
+   - 10-20% improvement in 6 months is realistic
+   - 50% improvement takes 12-18 months
+
+3. **Consider diminishing returns:**
+   - Moving from 3% to 2% is easier than 1% to 0.5%
+
+4. **Factor in seasonal variation:**
+   - Some measures have seasonal patterns
+
+**Use Case:** Before investing in a program, model the expected QM impact to justify ROI.`;
   }
 
-  // Specific star level recommendations
+  // ============================================
+  // SPECIFIC STAR LEVEL RECOMMENDATIONS
+  // ============================================
   const starMatch = lowerInput.match(/(\d)\s*star/);
-  if (starMatch || lowerInput.includes('current') || lowerInput.includes('my rating')) {
+  if (starMatch || lowerInput.includes('current rating') || lowerInput.includes('my rating') ||
+      lowerInput.includes('our rating') || lowerInput.includes('specific')) {
     const starLevel = starMatch ? parseInt(starMatch[1]) : 3;
     const recs = getImprovementRecommendations(starLevel);
-    return `**Recommendations for ${recs.fromTo}**
+
+    return `**Recommendations for ${recs.fromTo} Improvement**
 
 **Timeline:** ${recs.timeline}
 
 **Priority Actions:**
 ${recs.priorityActions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
+**Key Focus Areas:**
+${recs.focus.slice(0, 6).map(f => `✓ ${f}`).join('\n')}
+
 **Expected ROI:** ${recs.expectedROI}
 
-**Focus Areas:**
-${recs.focus.slice(0, 5).map(f => `- ${f}`).join('\n')}
+**Monitoring:**
+- Track QM trends monthly
+- Review staffing reports weekly
+- Mock surveys quarterly
 
-Would you like details on any specific improvement area?`;
+What specific area would you like to focus on first?`;
   }
 
-  // Context-aware responses based on current page
-  if (pathname === '/quality-measures') {
-    return `I see you're on the **Quality Measures page**!
+  // ============================================
+  // CONTEXT-AWARE RESPONSES
+  // ============================================
 
-This page lets you:
-1. **Overview Tab**: See priority improvement areas ranked by impact
-2. **Long-Stay/Short-Stay Tabs**: Drill into each measure with thresholds
-3. **What-If Simulator**: Model improvements in real-time
-4. **Action Plan**: Get specific, actionable recommendations
+  // Quality Measures page
+  if (pathname === '/quality-measures') {
+    return `I see you're on the **Quality Measures** page!
+
+**This page lets you:**
+1. **Overview Tab** - See priority improvement areas ranked by impact
+2. **Long-Stay/Short-Stay Tabs** - Drill into each measure with thresholds
+3. **What-If Simulator** - Model improvements and see projected star changes
+4. **Action Plan** - Get specific, actionable recommendations
+5. **CMS Methodology** - Learn exactly how ratings are calculated
 
 **Quick Tips:**
-- Focus on highest-weight measures first (Falls, Pressure Ulcers)
-- Use the simulator to see projected star changes
-- Each measure has 5+ concrete action steps
+- Focus on **highest-weight measures** first (Falls, Pressure Ulcers)
+- Use the **simulator** to see projected star changes before investing
+- Each measure has **5+ concrete action steps**
+- The **threshold table** shows exactly what you need to hit
 
-What would you like to know more about?`;
+What specific measure or area would you like help with?`;
   }
 
+  // Learn page
   if (pathname === '/learn') {
     return `Welcome to the **CMS Five-Star Knowledge Base**!
 
-Here you can learn about:
-- How ratings are calculated
-- Health Inspection scoring methodology
-- Staffing requirements and thresholds
-- All 28 Quality Measures with specific thresholds
-- Improvement strategies and timelines
-- Cost-effective tactics
+**What You'll Find Here:**
+- **Overview** - System fundamentals and history
+- **Health Inspections** - Deficiency scoring, cut points
+- **Staffing** - HPRD requirements, 2023 rules
+- **Quality Measures** - All 28 measures with thresholds
+- **Overall Rating** - How it all combines
+- **Improvement Strategies** - Evidence-based paths
+- **Resources** - Links to official CMS documents
 
-Use the tabs to explore each domain in depth. Ask me specific questions anytime!`;
+**Pro Tip:** Use the tabs to explore each domain in depth. Each section has:
+- Exact thresholds and cut points
+- Action plans for improvement
+- Key formulas and calculations
+
+Ask me specific questions anytime!`;
   }
 
+  // Provider detail page
   if (pathname.startsWith('/provider/')) {
     return `Looking at a **specific provider**? I can help you understand:
 
-- **Quality Scores**: What drives their current rating
-- **Improvement Opportunities**: Where they can gain stars
-- **Valuation Impact**: How stars affect facility value
-- **Benchmarking**: How they compare to peers
+**Quality Analysis:**
+- What's driving their current star rating
+- Which QMs are strengths vs. weaknesses
+- How they compare to state/national benchmarks
 
-What aspect would you like to explore?`;
+**Improvement Opportunities:**
+- Specific measures to target
+- Expected impact of improvements
+- Cost-benefit analysis
+
+**M&A Considerations:**
+- Valuation impact of star ratings
+- Turnaround potential
+- Regulatory risk factors
+
+**What would you like to explore?**
+- "Show me their QM breakdown"
+- "What could improve their rating?"
+- "How does this affect valuation?"`;
   }
 
-  // Default comprehensive response
-  return `Hi! I'm **Phill**, your CMS Five-Star expert.
+  // Deals page
+  if (pathname === '/deals') {
+    return `Managing your **deal pipeline**? Star ratings are critical for:
 
-I have comprehensive knowledge of the entire rating system, including:
+**Due Diligence:**
+- Overall rating trend (improving/declining)
+- Component ratings (HI, Staffing, QM)
+- Specific deficiency patterns
+- Pending survey results
 
-**Quality Measures (28 total):**
+**Valuation Adjustments:**
+- 5-star: Premium multiple
+- 3-star: Market rate
+- 1-2 star: Discount for turnaround work
+
+**Integration Planning:**
+- Timeline to improve ratings post-acquisition
+- Investment needed for improvements
+- Key staffing/operational changes
+
+**Ask me about:**
+- "How do stars affect valuation multiples?"
+- "What's the turnaround timeline for a 2-star?"
+- "What due diligence should I request?"`;
+  }
+
+  // Map page
+  if (pathname === '/map') {
+    return `Exploring the **geographic view**? Here's what to look for:
+
+**Market Dynamics:**
+- Star rating distribution by market
+- Consolidation opportunities
+- Competitive positioning
+
+**Opportunity Identification:**
+- Low-star facilities in strong markets
+- Clustering of similar-rated facilities
+- Rural vs. urban rating patterns
+
+**M&A Insights:**
+- Markets with improvement potential
+- Competition from high-rated players
+- Regulatory environment by state
+
+**Tip:** CON (Certificate of Need) states often have different dynamics than non-CON states.`;
+  }
+
+  // Insights page
+  if (pathname === '/insights') {
+    return `Viewing **market insights**? Star ratings provide context:
+
+**Market Analysis:**
+- Average star rating by market
+- Rating trends over time
+- Best/worst performing segments
+
+**Competitive Intelligence:**
+- Competitor star ratings
+- Market positioning opportunities
+- Quality leaders vs. laggards
+
+**Investment Thesis:**
+- Where are ratings improving?
+- Turnaround opportunities
+- Premium quality markets
+
+Ask about specific markets or trends!`;
+  }
+
+  // Valuation page
+  if (pathname === '/valuation') {
+    return `Working on **valuations**? Star ratings impact value through:
+
+**Direct Revenue Impact:**
+- Occupancy correlation (5-10% spread)
+- Payer mix quality
+- SNF VBP payments (up to 2%)
+- Managed care contract access
+
+**Risk Factors:**
+- SFF status = significant discount
+- Declining ratings = risk premium
+- Staffing instability = operational risk
+
+**Valuation Adjustments:**
+- 5-star: 1.2-1.5x typical multiple
+- 3-star: Market multiple
+- 1-2 star: 0.6-0.8x with turnaround plan
+
+**Model Inputs:**
+- Current rating and trend
+- Time/cost to improve
+- Market competition quality
+
+What specific valuation aspect can I help with?`;
+  }
+
+  // ============================================
+  // DEFAULT COMPREHENSIVE RESPONSE
+  // ============================================
+  return `Hi! I'm **Phill**, your CMS Five-Star expert. I have comprehensive knowledge of the entire rating system.
+
+**I can help you with:**
+
+📊 **Quality Measures (28 total)**
 - All Long-Stay and Short-Stay measures
 - Exact star thresholds for each
 - Specific action plans to improve
 
-**Star Rating Calculation:**
-- Health Inspection scoring methodology
-- Staffing requirements and formulas
+⭐ **Star Rating Calculation**
+- Health Inspection scoring
+- Staffing requirements (including 2023 rules)
 - Overall rating computation
 
-**Improvement Strategies:**
+📈 **Improvement Strategies**
 - Evidence-based paths from 1→5 stars
 - Cost-effective tactics (many free!)
 - ROI data and timelines
+
+💰 **M&A & Valuation**
+- How ratings affect facility value
+- Due diligence guidance
+- Turnaround potential analysis
 
 **Try asking me:**
 - "How do I reduce falls?"
 - "What are the staffing requirements?"
 - "How is the overall rating calculated?"
-- "Give me cost-effective improvement ideas"
+- "What's the ROI of improving to 4 stars?"
 - "Explain pressure ulcer thresholds"
+- "How do stars affect valuation?"
 
 Or visit **/learn** for the full knowledge base!`;
 }
 
-// Quick action buttons based on context
+// ============================================
+// CONTEXT-AWARE QUICK ACTIONS
+// ============================================
+
 function getQuickActions(pathname: string): QuickAction[] {
   const baseActions: QuickAction[] = [
-    {
-      label: 'QM Overview',
-      prompt: 'Give me an overview of all quality measures',
-      icon: <Activity className="w-4 h-4" />
-    },
-    {
-      label: 'Improve Stars',
-      prompt: 'How can I improve star ratings cost-effectively?',
-      icon: <Star className="w-4 h-4" />
-    },
+    { label: 'QM Overview', prompt: 'Give me an overview of all quality measures', icon: <Activity className="w-4 h-4" /> },
+    { label: 'Improve Stars', prompt: 'How can I improve star ratings cost-effectively?', icon: <Star className="w-4 h-4" /> },
   ];
 
   if (pathname === '/quality-measures') {
     return [
-      {
-        label: 'Falls Action Plan',
-        prompt: 'Give me the complete action plan to reduce falls',
-        icon: <AlertTriangle className="w-4 h-4" />
-      },
-      {
-        label: 'What-If Help',
-        prompt: 'How do I use the What-If Simulator?',
-        icon: <Calculator className="w-4 h-4" />
-      },
-      {
-        label: 'QM Thresholds',
-        prompt: 'What are all the star thresholds for quality measures?',
-        icon: <Target className="w-4 h-4" />
-      },
+      { label: 'Falls Plan', prompt: 'Give me the complete action plan to reduce falls', icon: <AlertTriangle className="w-4 h-4" /> },
+      { label: 'What-If Help', prompt: 'How do I use the What-If Simulator?', icon: <Calculator className="w-4 h-4" /> },
+      { label: 'QM Thresholds', prompt: 'What are all the star thresholds for quality measures?', icon: <Target className="w-4 h-4" /> },
+      { label: 'Methodology', prompt: 'Explain the CMS calculation methodology', icon: <BookOpen className="w-4 h-4" /> },
     ];
   }
 
   if (pathname === '/learn') {
     return [
-      {
-        label: 'Health Inspections',
-        prompt: 'Explain the Health Inspections domain in detail',
-        icon: <Shield className="w-4 h-4" />
-      },
-      {
-        label: 'Staffing',
-        prompt: 'Explain the Staffing domain and HPRD requirements',
-        icon: <Users className="w-4 h-4" />
-      },
-      {
-        label: 'Resources',
-        prompt: 'What CMS resources and guides are available?',
-        icon: <BookOpen className="w-4 h-4" />
-      },
+      { label: 'Health Inspections', prompt: 'Explain the Health Inspections domain with scoring details', icon: <Shield className="w-4 h-4" /> },
+      { label: 'Staffing Rules', prompt: 'Explain staffing requirements including 2023 changes', icon: <Users className="w-4 h-4" /> },
+      { label: 'All 28 QMs', prompt: 'List all 28 quality measures with their weights', icon: <Activity className="w-4 h-4" /> },
+      { label: 'Resources', prompt: 'What CMS resources and guides are available?', icon: <BookOpen className="w-4 h-4" /> },
     ];
   }
 
   if (pathname.startsWith('/provider/')) {
     return [
-      {
-        label: 'Rating Impact',
-        prompt: 'How do star ratings affect facility value?',
-        icon: <TrendingUp className="w-4 h-4" />
-      },
-      {
-        label: 'Quick Wins',
-        prompt: 'What are quick wins to improve star ratings?',
-        icon: <Lightbulb className="w-4 h-4" />
-      },
+      { label: 'Rating Impact', prompt: 'How do star ratings affect facility value?', icon: <TrendingUp className="w-4 h-4" /> },
+      { label: 'Quick Wins', prompt: 'What are quick wins to improve star ratings?', icon: <Zap className="w-4 h-4" /> },
+      { label: 'QM Analysis', prompt: 'How do I analyze a facility\'s QM performance?', icon: <BarChart3 className="w-4 h-4" /> },
+      { label: 'Due Diligence', prompt: 'What star rating due diligence should I do?', icon: <FileText className="w-4 h-4" /> },
+    ];
+  }
+
+  if (pathname === '/deals' || pathname === '/valuation') {
+    return [
+      { label: 'Valuation Impact', prompt: 'How do star ratings affect valuation multiples?', icon: <DollarSign className="w-4 h-4" /> },
+      { label: 'Turnaround Timeline', prompt: 'How long does it take to improve star ratings?', icon: <Clock className="w-4 h-4" /> },
+      { label: 'Due Diligence', prompt: 'What rating data should I request in due diligence?', icon: <FileText className="w-4 h-4" /> },
+      { label: 'Risk Factors', prompt: 'What regulatory risks affect facility value?', icon: <AlertTriangle className="w-4 h-4" /> },
+    ];
+  }
+
+  if (pathname === '/map' || pathname === '/insights') {
+    return [
+      { label: 'Market Analysis', prompt: 'How do star ratings vary by market?', icon: <BarChart3 className="w-4 h-4" /> },
+      { label: 'CON States', prompt: 'How do CON states affect quality ratings?', icon: <Building2 className="w-4 h-4" /> },
       ...baseActions,
     ];
   }
 
   return [
     ...baseActions,
-    {
-      label: 'Calculation',
-      prompt: 'How is the overall star rating calculated?',
-      icon: <Calculator className="w-4 h-4" />
-    },
-    {
-      label: 'Resources',
-      prompt: 'What resources and guides are available?',
-      icon: <FileText className="w-4 h-4" />
-    },
+    { label: 'Calculation', prompt: 'How is the overall star rating calculated?', icon: <Calculator className="w-4 h-4" /> },
+    { label: 'Resources', prompt: 'What resources and guides are available?', icon: <FileText className="w-4 h-4" /> },
   ];
 }
+
+// ============================================
+// PHILL ASSISTANT COMPONENT
+// ============================================
 
 export function PhillAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -511,12 +1114,10 @@ export function PhillAssistant() {
 
   const quickActions = getQuickActions(pathname);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when chat opens
   useEffect(() => {
     if (isOpen && !isMinimized) {
       inputRef.current?.focus();
@@ -527,7 +1128,6 @@ export function PhillAssistant() {
     const text = messageText || input.trim();
     if (!text) return;
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -539,10 +1139,8 @@ export function PhillAssistant() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate typing delay for natural feel
     await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
 
-    // Generate response using knowledge base
     const response = generateResponse(text, pathname);
 
     const assistantMessage: Message = {
@@ -563,7 +1161,6 @@ export function PhillAssistant() {
     }
   };
 
-  // Don't show on landing page
   if (pathname === '/landing') return null;
 
   return (
@@ -646,7 +1243,7 @@ export function PhillAssistant() {
                           Your CMS Five-Star rating expert.
                         </p>
                         <p className="text-xs text-[var(--color-text-muted)] mb-4">
-                          I know all 28 quality measures, star thresholds, and improvement strategies.
+                          I know all 28 quality measures, star thresholds, improvement strategies, and M&A implications.
                         </p>
 
                         {/* Quick Actions */}
@@ -680,9 +1277,15 @@ export function PhillAssistant() {
                               }`}
                             >
                               <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                                {msg.content.split('**').map((part, i) =>
-                                  i % 2 === 1 ? <strong key={i}>{part}</strong> : part
-                                )}
+                                {msg.content.split(/(\*\*.*?\*\*|\`.*?\`)/g).map((part, i) => {
+                                  if (part.startsWith('**') && part.endsWith('**')) {
+                                    return <strong key={i}>{part.slice(2, -2)}</strong>;
+                                  }
+                                  if (part.startsWith('`') && part.endsWith('`')) {
+                                    return <code key={i} className="px-1 py-0.5 rounded bg-black/20 text-xs font-mono">{part.slice(1, -1)}</code>;
+                                  }
+                                  return part;
+                                })}
                               </div>
                             </div>
                           </motion.div>
@@ -710,7 +1313,7 @@ export function PhillAssistant() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="Ask about quality measures, star ratings..."
+                        placeholder="Ask about quality measures, star ratings, M&A..."
                         className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:border-[var(--color-turquoise-500)] focus:ring-1 focus:ring-[var(--color-turquoise-500)] transition-colors text-sm"
                       />
                       <button
