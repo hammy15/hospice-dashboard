@@ -7,10 +7,12 @@ import {
   Star, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
   ChevronRight, ChevronDown, Info, Target, Lightbulb, Calculator,
   BarChart3, Settings, RefreshCw, Download, Play, Pause,
-  ArrowUp, ArrowDown, Minus, HelpCircle, Zap
+  ArrowUp, ArrowDown, Minus, HelpCircle, Zap, BookOpen, ExternalLink
 } from 'lucide-react';
+import FiveStarDataset, { getActionPlan } from '@/lib/knowledge';
 
-// CMS Quality Measures for Nursing Homes - Long Stay and Short Stay
+// CMS Quality Measures - Complete list with official thresholds
+// Source: CMS Five-Star Quality Rating System Technical Users' Guide
 const QUALITY_MEASURES = {
   longStay: [
     {
@@ -283,7 +285,7 @@ const STATUS_COLORS = {
 };
 
 export default function QualityMeasuresPage() {
-  const [tab, setTab] = useState<'overview' | 'longStay' | 'shortStay' | 'whatIf' | 'actionPlan'>('overview');
+  const [tab, setTab] = useState<'overview' | 'longStay' | 'shortStay' | 'whatIf' | 'actionPlan' | 'methodology'>('overview');
   const [expandedQM, setExpandedQM] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [whatIfScores, setWhatIfScores] = useState<Record<string, number>>({});
@@ -392,6 +394,7 @@ export default function QualityMeasuresPage() {
           { id: 'shortStay', label: 'Short-Stay QMs', icon: Star },
           { id: 'whatIf', label: 'What-If Simulator', icon: Calculator },
           { id: 'actionPlan', label: 'Action Plan', icon: Lightbulb },
+          { id: 'methodology', label: 'CMS Methodology', icon: BookOpen },
         ].map(t => (
           <button
             key={t.id}
@@ -765,6 +768,265 @@ export default function QualityMeasuresPage() {
               <Download className="w-5 h-5" />
               Download Action Plan PDF
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* CMS Methodology Tab */}
+      {tab === 'methodology' && (
+        <div className="space-y-6">
+          {/* Overview Card */}
+          <div className="glass-card rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">CMS Five-Star Quality Rating System</h3>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  Official methodology from the Centers for Medicare & Medicaid Services
+                </p>
+              </div>
+            </div>
+            <p className="text-[var(--color-text-secondary)] mb-4">
+              {FiveStarDataset.Overview.Description}. The system uses data from{' '}
+              <strong>{FiveStarDataset.Overview.FacilitiesRated.toLocaleString()}</strong> skilled nursing facilities
+              and has been updated {FiveStarDataset.Overview.Updates.length} times since its{' '}
+              {FiveStarDataset.Overview.LaunchYear} launch.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="https://www.cms.gov/Medicare/Provider-Enrollment-and-Certification/CertificationandComplianc/FSQRS"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors text-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                CMS Official Documentation
+              </a>
+              <Link
+                href="/learn"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-400)] hover:bg-[var(--color-turquoise-500)]/30 transition-colors text-sm"
+              >
+                <BookOpen className="w-4 h-4" />
+                Full Knowledge Base
+              </Link>
+            </div>
+          </div>
+
+          {/* Three Domains */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Health Inspections */}
+            <div className="glass-card rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 text-red-400" />
+                </div>
+                <h4 className="font-semibold">Health Inspections</h4>
+              </div>
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                Based on deficiency citations from annual standard surveys, complaint investigations, and focused infection control surveys.
+              </p>
+              <div className="space-y-2 text-xs">
+                <div className="p-2 rounded bg-[var(--color-bg-tertiary)]">
+                  <span className="text-[var(--color-text-muted)]">Components:</span>
+                  <ul className="mt-1 space-y-1">
+                    <li>• Standard Survey weighted 65%</li>
+                    <li>• Complaint Investigations weighted 25%</li>
+                    <li>• Infection Control Survey weighted 10%</li>
+                  </ul>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-emerald-500/10 text-emerald-400">
+                  <span>5 Stars</span>
+                  <span>Top 10%</span>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-red-500/10 text-red-400">
+                  <span>1 Star</span>
+                  <span>Bottom 20%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Staffing */}
+            <div className="glass-card rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Target className="w-4 h-4 text-blue-400" />
+                </div>
+                <h4 className="font-semibold">Staffing</h4>
+              </div>
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                Based on RN hours and total nursing hours per resident day, adjusted for case-mix using Payroll-Based Journal (PBJ) data.
+              </p>
+              <div className="space-y-2 text-xs">
+                <div className="p-2 rounded bg-[var(--color-bg-tertiary)]">
+                  <span className="text-[var(--color-text-muted)]">Key Thresholds (HPRD):</span>
+                  <ul className="mt-1 space-y-1">
+                    <li>• RN: 0.75+ HPRD for 5 stars</li>
+                    <li>• Total: 4.10+ HPRD for 5 stars</li>
+                    <li>• Case-mix adjusted</li>
+                  </ul>
+                </div>
+                <div className="flex justify-between p-2 rounded bg-amber-500/10 text-amber-400">
+                  <span>Weekend Staffing</span>
+                  <span>Monitored since 2022</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quality Measures */}
+            <div className="glass-card rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                  <BarChart3 className="w-4 h-4 text-purple-400" />
+                </div>
+                <h4 className="font-semibold">Quality Measures</h4>
+              </div>
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                Based on MDS assessments (17 long-stay + 11 short-stay measures), with points assigned based on percentile thresholds.
+              </p>
+              <div className="space-y-2 text-xs">
+                <div className="p-2 rounded bg-[var(--color-bg-tertiary)]">
+                  <span className="text-[var(--color-text-muted)]">Point System:</span>
+                  <ul className="mt-1 space-y-1">
+                    <li>• 0-100 pts per measure</li>
+                    <li>• Total points determine stars</li>
+                    <li>• Updated quarterly</li>
+                  </ul>
+                </div>
+                <div className="grid grid-cols-2 gap-1 mt-2">
+                  <div className="p-1.5 rounded bg-emerald-500/10 text-emerald-400 text-center">546+ = 5★</div>
+                  <div className="p-1.5 rounded bg-blue-500/10 text-blue-400 text-center">486-545 = 4★</div>
+                  <div className="p-1.5 rounded bg-amber-500/10 text-amber-400 text-center">406-485 = 3★</div>
+                  <div className="p-1.5 rounded bg-red-500/10 text-red-400 text-center">&lt;406 = 1-2★</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Overall Rating Calculation */}
+          <div className="glass-card rounded-xl p-6">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5 text-amber-400" />
+              Overall Star Rating Calculation
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="text-sm font-medium mb-3 text-[var(--color-text-muted)]">Calculation Process</h5>
+                <ol className="space-y-2 text-sm">
+                  {FiveStarDataset.Domains.Overall.CalculationMethod.map((step, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--color-turquoise-500)]/20 text-[var(--color-turquoise-500)] flex items-center justify-center text-xs font-bold">
+                        {i + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div>
+                <h5 className="text-sm font-medium mb-3 text-[var(--color-text-muted)]">Star Rating Caps</h5>
+                <div className="space-y-2">
+                  {FiveStarDataset.Domains.Overall.Caps.map((cap, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-[var(--color-bg-tertiary)] text-sm">
+                      {cap}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* QM Measure Categories */}
+          <div className="glass-card rounded-xl p-6">
+            <h4 className="font-semibold mb-4">Quality Measure Categories</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 text-xs font-bold">17</span>
+                  Long-Stay Measures
+                </h5>
+                <ul className="space-y-1 text-sm">
+                  {FiveStarDataset.Domains.QualityMeasures.LongStayMeasuresList.map((measure, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                      <CheckCircle className="w-3 h-3 text-[var(--color-turquoise-500)]" />
+                      {measure.Name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h5 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">11</span>
+                  Short-Stay Measures
+                </h5>
+                <ul className="space-y-1 text-sm">
+                  {FiveStarDataset.Domains.QualityMeasures.ShortStayMeasuresList.map((measure, i) => (
+                    <li key={i} className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                      <CheckCircle className="w-3 h-3 text-[var(--color-turquoise-500)]" />
+                      {measure.Name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Sources */}
+          <div className="glass-card rounded-xl p-6">
+            <h4 className="font-semibold mb-4">Data Sources & Update Frequency</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)]">
+                <h5 className="font-medium mb-2">Health Inspections</h5>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  From CASPER database. 3-year average for standard surveys, 3-year history for complaints.
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)]">
+                <h5 className="font-medium mb-2">Staffing</h5>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  From Payroll-Based Journal (PBJ) data. Calculated as HPRD with case-mix adjustment using RUG-IV/PDPM.
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-[var(--color-bg-secondary)]">
+                <h5 className="font-medium mb-2">Quality Measures</h5>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  From MDS 3.0 assessments and claims data. Updated quarterly with rolling 12-month periods.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Key Thresholds Reference */}
+          <div className="glass-card rounded-xl p-6">
+            <h4 className="font-semibold mb-4">Key Quality Measure Thresholds</h4>
+            <p className="text-sm text-[var(--color-text-muted)] mb-4">
+              National percentile cutoffs for common quality measures. Lower is better for most measures.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)]">
+                    <th className="text-left py-2 px-3">Measure</th>
+                    <th className="text-center py-2 px-3 text-emerald-400">Excellent (&lt;)</th>
+                    <th className="text-center py-2 px-3 text-blue-400">Good (&lt;)</th>
+                    <th className="text-center py-2 px-3 text-amber-400">Average (&lt;)</th>
+                    <th className="text-center py-2 px-3 text-[var(--color-text-muted)]">National Avg</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {QUALITY_MEASURES.longStay.slice(0, 6).map(qm => (
+                    <tr key={qm.id} className="hover:bg-[var(--color-bg-hover)]">
+                      <td className="py-2 px-3 font-medium">{qm.name}</td>
+                      <td className="text-center py-2 px-3">{qm.thresholds.excellent}%</td>
+                      <td className="text-center py-2 px-3">{qm.thresholds.good}%</td>
+                      <td className="text-center py-2 px-3">{qm.thresholds.fair}%</td>
+                      <td className="text-center py-2 px-3 text-[var(--color-text-muted)]">{qm.nationalAvg}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
