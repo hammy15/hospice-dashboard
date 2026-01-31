@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Navigation } from './Navigation';
 import { SplashScreen } from './SplashScreen';
 import { DemoTour, useDemoTour } from './DemoTour';
+import { PhillAssistant } from './PhillAssistant';
 
 interface DemoContextType {
   openDemo: () => void;
@@ -69,6 +70,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onClose={closeDemo}
         onComplete={completeDemo}
       />
+
+      {/* Phill AI Assistant */}
+      <PhillAssistant />
     </DemoContext.Provider>
   );
 }

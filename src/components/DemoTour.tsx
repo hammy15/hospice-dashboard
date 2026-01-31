@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Search, Map, Target, Trophy, Flame,
   Briefcase, Users, Calculator, FileText, Building2,
   TrendingUp, DollarSign, Shield, Sparkles, CheckCircle,
-  ArrowRight, Zap, Globe, PieChart
+  ArrowRight, Zap, Globe, PieChart, Activity, HelpCircle,
+  MessageSquare, Star, Sliders
 } from 'lucide-react';
 
 interface DemoStep {
@@ -135,6 +136,33 @@ const demoSteps: DemoStep[] = [
     description: 'Risk assessment at a glance. See compliance scores, identify at-risk providers, and understand regulatory exposure before you acquire. Avoid costly surprises post-close.',
     icon: <Shield className="w-8 h-8" />,
     highlight: '/compliance',
+  },
+  {
+    id: 'quality-measures',
+    title: 'Quality Measures & Star Ratings',
+    description: 'Deep dive into CMS Quality Measures. Drill down into all 13 QMs (8 Long-Stay, 5 Short-Stay), see exact star rating thresholds, and get specific actionable recommendations. Our "What-If Simulator" lets you model improvements and see projected star rating changes in real-time.',
+    icon: <Activity className="w-8 h-8" />,
+    highlight: '/quality-measures',
+    stats: [
+      { label: 'Quality Measures', value: '13' },
+      { label: 'Action Plans', value: 'Custom' },
+      { label: 'What-If Simulator', value: 'Live' },
+    ],
+    tip: 'Use the What-If Simulator to model QM improvements before investing in operational changes.',
+  },
+  {
+    id: 'phill-assistant',
+    title: 'Meet Phill - Your AI Assistant',
+    description: 'Phill is your intelligent guide to quality measures and star ratings. Ask questions, get specific recommendations, and receive context-aware guidance. Phill understands nursing home operations and provides actionable advice — not generic suggestions.',
+    icon: <MessageSquare className="w-8 h-8" />,
+    tip: 'Phill can explain specific QM thresholds, suggest improvement strategies, and help you understand what drives star ratings.',
+  },
+  {
+    id: 'faq',
+    title: 'FAQ & Help Center',
+    description: 'Find answers to common questions about CMS star ratings, quality measures, the platform features, and M&A strategies. Our comprehensive FAQ covers everything from data sources to valuation methodologies.',
+    icon: <HelpCircle className="w-8 h-8" />,
+    highlight: '/faq',
   },
   {
     id: 'ready',

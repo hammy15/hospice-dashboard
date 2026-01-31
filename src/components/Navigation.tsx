@@ -8,7 +8,7 @@ import {
   ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3,
   Building2, Sliders, Mail, User, Briefcase, Users, Calculator,
   GitCompare, PieChart, Download, Shield, FileText, Play, DollarSign,
-  Activity
+  Activity, HelpCircle
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from './AuthProvider';
@@ -56,6 +56,8 @@ const toolsItems = [
   { href: '/competitors', label: 'Competitors', icon: Building2, section: 'research' },
   // Export
   { href: '/export', label: 'Export', icon: Download, section: 'export' },
+  // Help
+  { href: '/faq', label: 'FAQ & Help', icon: HelpCircle, section: 'help' },
 ];
 
 const toolsSections = [
@@ -64,6 +66,7 @@ const toolsSections = [
   { key: 'opportunities', label: 'Opportunities' },
   { key: 'research', label: 'Research' },
   { key: 'export', label: 'Data' },
+  { key: 'help', label: 'Help' },
 ];
 
 export function Navigation() {
