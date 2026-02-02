@@ -16,7 +16,7 @@ const DemoContext = createContext<DemoContextType>({ openDemo: () => {} });
 export const useDemo = () => useContext(DemoContext);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState<boolean | null>(null);
   const [mounted, setMounted] = useState(false);
   const { isOpen, openDemo, closeDemo, completeDemo } = useDemoTour();
   const pathname = usePathname();
@@ -28,9 +28,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMounted(true);
     // Check if already seen (persists forever, not just session)
     const hasSeenSplash = localStorage.getItem('hasSeenSplash');
-    if (hasSeenSplash) {
-      setShowSplash(false);
-    }
+    // Only show splash on first ever visit
+    setShowSplash(!hasSeenSplash);
   }, []);
 
   // Landing page gets clean slate - no app shell
@@ -38,8 +37,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Prevent hydration mismatch
-  if (!mounted) {
+  // Prevent hydration mismatch - wait until we check localStorage
+  if (!mounted || showSplash === null) {
     return (
       <PhillProvider>
         <DemoContext.Provider value={{ openDemo }}>
