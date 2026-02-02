@@ -370,6 +370,9 @@ export function DashboardClient({
         </div>
       </div>
 
+      {/* Conditional Content Based on Active View */}
+      {activeView === 'overview' ? (
+        <>
       {/* Executive Summary Section */}
       <ExpandableSection
         title="Executive Summary & Market Overview"
@@ -1452,6 +1455,216 @@ export function DashboardClient({
           </div>
         </ExpandableSection>
       </div>
+
+        </>
+      ) : (
+        /* Detailed View */
+        <div className="space-y-6">
+          {/* Detailed Statistics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <DetailedMetricCard
+              label="Total Providers"
+              value={totalCount.toLocaleString()}
+              subtext="Active hospices"
+              icon={Building}
+              details="Total Medicare-certified hospice providers tracked in the database."
+            />
+            <DetailedMetricCard
+              label="GREEN Targets"
+              value={greenCount.toLocaleString()}
+              subtext={`${greenRate}% of market`}
+              trend="up"
+              icon={Target}
+              details="Providers meeting all quality thresholds for acquisition."
+            />
+            <DetailedMetricCard
+              label="YELLOW Watch"
+              value={yellowCount.toLocaleString()}
+              subtext={`${yellowRate}% of market`}
+              icon={AlertTriangle}
+              details="Providers with mixed indicators requiring additional due diligence."
+            />
+            <DetailedMetricCard
+              label="RED Flagged"
+              value={redCount.toLocaleString()}
+              subtext={`${redRate}% of market`}
+              trend="down"
+              icon={XCircle}
+              details="Providers with significant concerns or risk factors."
+            />
+            <DetailedMetricCard
+              label="CON Protected"
+              value={greenConCount.toLocaleString()}
+              subtext={`${conCoverage}% of GREEN`}
+              icon={Shield}
+              details="GREEN targets in Certificate of Need states with regulatory barriers."
+            />
+            <DetailedMetricCard
+              label="Endemic GREEN"
+              value={endemicGreen.toLocaleString()}
+              subtext="Independent operators"
+              icon={Heart}
+              details="Single-location independent operators - prime for owner carry-back."
+            />
+          </div>
+
+          {/* Performance Metrics */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl glass-card">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                GREEN Target Metrics
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-xl bg-[var(--color-bg-tertiary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Avg ADC</div>
+                  <div className="text-2xl font-bold font-mono">{avgGreenAdc || '—'}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-[var(--color-bg-tertiary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Avg Score</div>
+                  <div className="text-2xl font-bold font-mono">{avgGreenScore || '—'}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-[var(--color-bg-tertiary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Est. Market Value</div>
+                  <div className="text-2xl font-bold font-mono">${totalMarketValue}M</div>
+                </div>
+                <div className="p-3 rounded-xl bg-[var(--color-bg-tertiary)]">
+                  <div className="text-xs text-[var(--color-text-muted)] mb-1">Carry-Back Targets</div>
+                  <div className="text-2xl font-bold font-mono text-teal-400">{primeCarryBack}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl glass-card">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <PieChart className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                ADC Distribution (GREEN)
+              </h4>
+              <div className="space-y-2">
+                {adcDistribution.map((d: any) => (
+                  <div key={d.range} className="flex items-center justify-between">
+                    <span className="text-sm text-[var(--color-text-secondary)]">{d.range}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 h-2 rounded-full bg-[var(--color-border)]">
+                        <div
+                          className="h-full rounded-full bg-emerald-500"
+                          style={{ width: `${(Number(d.green_count) / adcMax) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-mono w-8 text-right">{d.green_count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl glass-card">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Score Distribution (GREEN)
+              </h4>
+              <div className="space-y-2">
+                {scoreDistribution.map((d: any) => (
+                  <div key={d.range} className="flex items-center justify-between">
+                    <span className="text-sm text-[var(--color-text-secondary)]">{d.range}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 h-2 rounded-full bg-[var(--color-border)]">
+                        <div
+                          className="h-full rounded-full bg-[var(--color-turquoise-500)]"
+                          style={{ width: `${(Number(d.green_count) / scoreMax) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-mono w-8 text-right">{d.green_count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* State Rankings */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl glass-card">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Top States by GREEN Targets
+              </h4>
+              <div className="space-y-2">
+                {stateStats.slice(0, 10).map((state: any, i: number) => (
+                  <Link
+                    key={state.state}
+                    href={`/market/${state.state.toLowerCase()}`}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-md bg-[var(--color-bg-tertiary)] flex items-center justify-center text-xs font-mono">
+                        {i + 1}
+                      </span>
+                      <span className="font-medium">{state.state}</span>
+                      {state.is_con_state && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500">CON</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm font-mono">
+                      <span className="text-emerald-500">{state.green_count}G</span>
+                      <span className="text-amber-500">{state.yellow_count}Y</span>
+                      <span className="text-red-500">{state.red_count}R</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl glass-card">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+                Ownership Breakdown
+              </h4>
+              <div className="space-y-2">
+                {ownershipStats.map((o: any) => (
+                  <div key={o.type} className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-bg-tertiary)]">
+                    <span className="text-sm">{o.type || 'Other'}</span>
+                    <div className="flex items-center gap-4 text-sm font-mono">
+                      <span className="text-emerald-500">{o.green_count}G</span>
+                      <span className="text-amber-500">{o.yellow_count}Y</span>
+                      <span className="text-[var(--color-text-muted)]">{o.total} total</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* CON vs Non-CON Comparison */}
+          <div className="p-4 rounded-2xl glass-card">
+            <h4 className="font-semibold mb-4 flex items-center gap-2">
+              <Scale className="w-4 h-4 text-[var(--color-turquoise-500)]" />
+              CON State vs Non-CON State Comparison
+            </h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              {conComparison.map((c: any) => (
+                <div key={c.category} className={`p-4 rounded-xl ${c.category === 'CON States' ? 'bg-emerald-500/5 border border-emerald-500/20' : 'bg-[var(--color-bg-tertiary)]'}`}>
+                  <h5 className="font-medium mb-3">{c.category}</h5>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-xl font-bold font-mono">{c.total}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">Total</div>
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold font-mono text-emerald-500">{c.green_count}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">GREEN</div>
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold font-mono">{c.avg_score || '—'}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">Avg Score</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Compact Footer */}
       <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
