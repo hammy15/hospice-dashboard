@@ -8,7 +8,7 @@ import {
   ChevronDown, Flame, TrendingUp, Map, Search, Trophy, BarChart3,
   Building2, Sliders, Mail, User, Briefcase, Users, Calculator,
   GitCompare, PieChart, Download, Shield, FileText, Play, DollarSign,
-  Activity, HelpCircle
+  Activity, HelpCircle, Menu, X
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from './AuthProvider';
@@ -23,15 +23,17 @@ const hotMarkets = [
   { state: 'NV', label: 'Nevada', conState: false },
 ];
 
-// Reorganized in logical user flow order:
-// 1. Dashboard (overview) → 2. Insights (market intel) → 3. Search (find) →
-// 4. Map (visualize) → 5. Targets (browse) → 6. Top 10 (best picks)
+// Main nav items - only 4 most important
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/insights', label: 'Insights', icon: BarChart3 },
   { href: '/search', label: 'Search', icon: Search },
   { href: '/map', label: 'Map', icon: Map },
   { href: '/targets', label: 'Targets', icon: List },
+];
+
+// Items that go in the hamburger menu
+const moreNavItems = [
+  { href: '/insights', label: 'Insights', icon: BarChart3 },
   { href: '/top-10', label: 'Top 10', icon: Trophy },
 ];
 
@@ -75,19 +77,14 @@ export function Navigation() {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { openDemo } = useDemo();
-  const [hotMarketsOpen, setHotMarketsOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const toolsRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
+  // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setHotMarketsOpen(false);
-      }
-      if (toolsRef.current && !toolsRef.current.contains(event.target as Node)) {
-        setToolsOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -96,23 +93,26 @@ export function Navigation() {
 
   const isHotMarketActive = pathname.startsWith('/market/');
   const isToolsActive = toolsItems.some(item => pathname === item.href);
+  const isMoreNavActive = moreNavItems.some(item => pathname === item.href) || isHotMarketActive || isToolsActive;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-[var(--color-border)]">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16 gap-4">
+          {/* Logo - fixed width to prevent squishing */}
+          <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center shadow-lg shadow-[var(--color-turquoise-500)]/30">
               <Star className="w-5 h-5 text-white fill-white" />
             </div>
-            <div>
-              <h1 className="font-[family-name:var(--font-display)] font-bold text-lg leading-tight">
-                My 5 Star Report
+            <div className="hidden sm:block">
+              <h1 className="font-[family-name:var(--font-display)] font-bold text-lg leading-tight whitespace-nowrap">
+                Hospice Tracker
               </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">CMS Quality Rating Intelligence</p>
+              <p className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">M&A Intelligence Platform</p>
             </div>
           </Link>
 
+          {/* Main Navigation - 4 primary tabs */}
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -122,14 +122,14 @@ export function Navigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
+                  className={`relative px-3 sm:px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
                     isActive
                       ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  {item.label}
+                  <span className="hidden sm:inline">{item.label}</span>
                   {isActive && (
                     <motion.div
                       layoutId="nav-indicator"
@@ -141,22 +141,20 @@ export function Navigation() {
               );
             })}
 
-            {/* Hot Markets Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            {/* Hamburger Menu - contains all other items */}
+            <div className="relative" ref={menuRef}>
               <button
-                onClick={() => setHotMarketsOpen(!hotMarketsOpen)}
-                className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
-                  isHotMarketActive
+                onClick={() => setMenuOpen(!menuOpen)}
+                className={`relative px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
+                  isMoreNavActive
                     ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
                     : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
                 }`}
               >
-                <Flame className="w-4 h-4 text-orange-500" />
-                Hot Markets
-                <ChevronDown className={`w-3 h-3 transition-transform ${hotMarketsOpen ? 'rotate-180' : ''}`} />
-                {isHotMarketActive && (
+                {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {isMoreNavActive && (
                   <motion.div
-                    layoutId="nav-indicator"
+                    layoutId="nav-indicator-menu"
                     className="absolute inset-0 bg-[var(--color-turquoise-500)]/10 rounded-lg border border-[var(--color-turquoise-500)]/30"
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                   />
@@ -164,99 +162,90 @@ export function Navigation() {
               </button>
 
               <AnimatePresence>
-                {hotMarketsOpen && (
+                {menuOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden"
+                    className="absolute top-full mt-2 right-0 w-72 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden max-h-[80vh] overflow-y-auto"
                   >
                     <div className="p-2">
-                      <div className="px-3 py-2 flex items-center justify-between">
-                        <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                          Priority Markets
-                        </span>
-                        <div className="flex items-center gap-2 text-[10px]">
-                          <span className="text-emerald-400">G=GREEN</span>
-                          <span className="text-amber-400">Y=YELLOW</span>
+                      {/* More Navigation Items */}
+                      <div className="mb-3">
+                        <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                          Navigation
                         </div>
+                        {moreNavItems.map((item) => {
+                          const isActive = pathname === item.href;
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={() => setMenuOpen(false)}
+                              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors ${
+                                isActive
+                                  ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
+                                  : 'hover:bg-[var(--color-bg-hover)]'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span className="font-medium text-sm">{item.label}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
-                      {hotMarkets.map((market) => {
-                        const isActive = pathname === `/market/${market.state.toLowerCase()}`;
-                        return (
-                          <Link
-                            key={market.state}
-                            href={`/market/${market.state.toLowerCase()}`}
-                            onClick={() => setHotMarketsOpen(false)}
-                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
-                              isActive
-                                ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
-                                : 'hover:bg-[var(--color-bg-hover)]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span className="font-medium">{market.label}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {market.conState && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">
-                                  CON
-                                </span>
-                              )}
-                              <TrendingUp className="w-3.5 h-3.5 text-orange-400" />
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                    <div className="border-t border-[var(--color-border)] p-2">
-                      <Link
-                        href="/targets"
-                        onClick={() => setHotMarketsOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-sm text-[var(--color-text-secondary)]"
-                      >
-                        <List className="w-4 h-4" />
-                        View All States →
-                      </Link>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
 
-            {/* Tools Dropdown */}
-            <div className="relative" ref={toolsRef}>
-              <button
-                onClick={() => setToolsOpen(!toolsOpen)}
-                className={`relative px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 ${
-                  isToolsActive
-                    ? 'text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'
-                }`}
-              >
-                <Sliders className="w-4 h-4" />
-                Tools
-                <ChevronDown className={`w-3 h-3 transition-transform ${toolsOpen ? 'rotate-180' : ''}`} />
-              </button>
+                      {/* Hot Markets Section */}
+                      <div className="mb-3 border-t border-[var(--color-border)] pt-2">
+                        <div className="px-3 py-1.5 flex items-center justify-between">
+                          <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+                            <Flame className="w-3 h-3 text-orange-500" />
+                            Hot Markets
+                          </span>
+                          <div className="flex items-center gap-2 text-[9px]">
+                            <span className="text-emerald-400">G=GREEN</span>
+                            <span className="text-amber-400">Y=YELLOW</span>
+                          </div>
+                        </div>
+                        {hotMarkets.map((market) => {
+                          const isActive = pathname === `/market/${market.state.toLowerCase()}`;
+                          return (
+                            <Link
+                              key={market.state}
+                              href={`/market/${market.state.toLowerCase()}`}
+                              onClick={() => setMenuOpen(false)}
+                              className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                                isActive
+                                  ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
+                                  : 'hover:bg-[var(--color-bg-hover)]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                <span className="font-medium text-sm">{market.label}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {market.conState && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">
+                                    CON
+                                  </span>
+                                )}
+                                <TrendingUp className="w-3 h-3 text-orange-400" />
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
 
-              <AnimatePresence>
-                {toolsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute top-full mt-2 right-0 w-64 glass-card rounded-xl border border-[var(--color-border)] shadow-xl overflow-hidden max-h-[70vh] overflow-y-auto"
-                  >
-                    <div className="p-2">
+                      {/* Tools Sections */}
                       {toolsSections.map((section) => {
                         const sectionItems = toolsItems.filter(item => item.section === section.key);
                         if (sectionItems.length === 0) return null;
 
                         return (
-                          <div key={section.key} className="mb-2">
+                          <div key={section.key} className="mb-2 border-t border-[var(--color-border)] pt-2">
                             <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
                               {section.label}
                             </div>
@@ -267,7 +256,7 @@ export function Navigation() {
                                 <Link
                                   key={item.href}
                                   href={item.href}
-                                  onClick={() => setToolsOpen(false)}
+                                  onClick={() => setMenuOpen(false)}
                                   className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
                                     isActive
                                       ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-700)] dark:text-[var(--color-turquoise-300)]'
@@ -287,48 +276,49 @@ export function Navigation() {
                 )}
               </AnimatePresence>
             </div>
+          </div>
 
-            <div className="ml-4 pl-4 border-l border-[var(--color-border)] flex items-center gap-2">
-              {/* Demo Button */}
-              <button
-                onClick={openDemo}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-400 hover:from-purple-500/20 hover:to-pink-500/20 transition-all border border-purple-500/20"
-                title="Watch Platform Demo"
-              >
-                <Play className="w-3.5 h-3.5" />
-                Demo
-              </button>
+          {/* Right side actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Demo Button - hidden on small screens */}
+            <button
+              onClick={openDemo}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-purple-400 hover:from-purple-500/20 hover:to-pink-500/20 transition-all border border-purple-500/20"
+              title="Watch Platform Demo"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Demo
+            </button>
 
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-all duration-200 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-                title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              >
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5" />
-                ) : (
-                  <Sun className="w-5 h-5" />
-                )}
-              </button>
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-all duration-200 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5" />
+              ) : (
+                <Sun className="w-5 h-5" />
+              )}
+            </button>
 
-              <Link
-                href="/account"
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  pathname === '/account'
-                    ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-400)]'
-                    : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                }`}
-                title={user ? user.email : 'Sign In'}
-              >
-                {user ? (
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center text-white text-xs font-bold">
-                    {user.name?.[0] || user.email[0].toUpperCase()}
-                  </div>
-                ) : (
-                  <User className="w-5 h-5" />
-                )}
-              </Link>
-            </div>
+            <Link
+              href="/account"
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                pathname === '/account'
+                  ? 'bg-[var(--color-turquoise-500)]/10 text-[var(--color-turquoise-400)]'
+                  : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+              }`}
+              title={user ? user.email : 'Sign In'}
+            >
+              {user ? (
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[var(--color-turquoise-400)] to-[var(--color-turquoise-600)] flex items-center justify-center text-white text-xs font-bold">
+                  {user.name?.[0] || user.email[0].toUpperCase()}
+                </div>
+              ) : (
+                <User className="w-5 h-5" />
+              )}
+            </Link>
           </div>
         </div>
       </div>
